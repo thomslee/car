@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
-"""种子数据：沃尔沃保养基准 / 参考价区间 / 大模型模板 / 默认设置"""
+"""种子数据：沃尔沃保养基准 / 参考价区间 / 大模型模板 / 默认设置 / 初始管理员"""
+import os
+
 from sqlalchemy.orm import Session
 
-from .models import AiProvider, MaintenanceManual, ReferencePrice, Setting
+from .models import AiProvider, MaintenanceManual, ReferencePrice, Setting, User
+from .security import hash_password
 
 # 沃尔沃官方基础保养周期（来源：volvocars.com.cn S60 保养页 + 车主手册共识）
 VOLVO_MANUAL = [
@@ -55,6 +58,22 @@ DEFAULT_SETTINGS = {
 
 
 def seed_if_empty(db: Session):
+    # 初始管理员：仅当系统中完全没有用户时创建（全新部署兜底）
+    if db.query(User).count() == 0:
+        admin_pwd = os.getenv("ADMIN_INITIAL_PASSWORD", "admin123456")
+        db.add(
+            User(
+                username="admin",
+                password_hash=hash_password(admin_pwd),
+                display_name="系统管理员",
+                role="admin",
+                is_active=True,
+            )
+        )
+        print(
+            "[seed] 已创建默认管理员账号 admin / %s，"
+            "请立即登录并在「用户管理」中修改密码或改用已有账号！" % admin_pwd
+        )
     if db.query(MaintenanceManual).count() == 0:
         for item, km, months, note in VOLVO_MANUAL:
             db.add(

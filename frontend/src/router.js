@@ -2,12 +2,12 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 const routes = [
   { path: '/login', component: () => import('./views/LoginView.vue') },
-  { path: '/register', component: () => import('./views/RegisterView.vue') },
   {
     path: '/',
     component: () => import('./views/LayoutView.vue'),
     children: [
       { path: '', component: () => import('./views/HomeView.vue'), meta: { title: '我的车辆' } },
+      { path: 'users', component: () => import('./views/UserManageView.vue'), meta: { title: '用户管理', requiresAdmin: true } },
       { path: 'vehicle/new', component: () => import('./views/VehicleFormView.vue'), meta: { title: '添加车辆' } },
       { path: 'vehicle/:id/edit', component: () => import('./views/VehicleFormView.vue'), meta: { title: '编辑车辆' } },
       { path: 'vehicle/:id', component: () => import('./views/VehicleDetailView.vue'), meta: { title: '车辆主页' } },
@@ -35,8 +35,10 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   const token = localStorage.getItem('car_token')
-  if (!token && to.path !== '/login' && to.path !== '/register') return '/login'
-  if (token && (to.path === '/login' || to.path === '/register')) return '/'
+  const user = JSON.parse(localStorage.getItem('car_user') || 'null')
+  if (!token && to.path !== '/login') return '/login'
+  if (token && to.path === '/login') return '/'
+  if (to.meta.requiresAdmin && user?.role !== 'admin') return '/'
   return true
 })
 

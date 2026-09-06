@@ -13,7 +13,9 @@
       </van-cell-group>
       <div style="margin:24px 16px;">
         <van-button round block type="primary" native-type="submit" :loading="loading">登 录</van-button>
-        <van-button round block plain type="primary" style="margin-top:12px;" @click="router.push('/register')">注册账号</van-button>
+      </div>
+      <div style="text-align:center;font-size:12px;color:#969799;margin-top:-8px;">
+        账号由管理员创建，如无账号请联系管理员
       </div>
     </van-form>
   </div>

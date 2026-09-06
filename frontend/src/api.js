@@ -11,6 +11,10 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (resp) => resp.data,
   (err) => {
+    if (err.response?.status === 401) {
+      localStorage.removeItem('car_token')
+      localStorage.removeItem('car_user')
+    }
     const detail = err.response?.data?.detail || err.message || '请求失败'
     return Promise.reject(new Error(typeof detail === 'string' ? detail : JSON.stringify(detail)))
   }

@@ -7,12 +7,6 @@ from pydantic import BaseModel, Field
 
 
 # ---------- 认证 ----------
-class RegisterIn(BaseModel):
-    username: str = Field(min_length=3, max_length=50)
-    password: str = Field(min_length=6, max_length=100)
-    display_name: str = ""
-
-
 class LoginIn(BaseModel):
     username: str
     password: str
@@ -22,6 +16,9 @@ class UserOut(BaseModel):
     id: int
     username: str
     display_name: str
+    role: str = "user"
+    is_active: bool = True
+    created_at: Optional[Any] = None
 
     class Config:
         from_attributes = True
@@ -30,6 +27,26 @@ class UserOut(BaseModel):
 class TokenOut(BaseModel):
     token: str
     user: UserOut
+
+
+class ChangePasswordIn(BaseModel):
+    old_password: str
+    new_password: str = Field(min_length=6, max_length=100)
+
+
+# ---------- 管理员：用户管理 ----------
+class AdminUserCreate(BaseModel):
+    username: str = Field(min_length=3, max_length=50)
+    password: str = Field(min_length=6, max_length=100)
+    display_name: str = ""
+    role: str = "user"  # admin / user
+
+
+class AdminUserUpdate(BaseModel):
+    display_name: Optional[str] = None
+    password: Optional[str] = Field(default=None, min_length=6, max_length=100)
+    role: Optional[str] = None
+    is_active: Optional[bool] = None
 
 
 # ---------- 车辆 ----------

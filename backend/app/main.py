@@ -7,10 +7,12 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
 
 from .config import UPLOAD_DIR
 from .database import Base, SessionLocal, engine
 from .routers import (
+    admin_users,
     ai,
     attachments,
     auth,
@@ -29,8 +31,32 @@ from .seed_data import seed_if_empty
 from .services import remind_service
 
 
+def _ensure_user_role_schema():
+    """幂等迁移：users 表补充 role/is_active 列；确保至少存在一名管理员。"""
+    with engine.connect() as conn:
+        cols = conn.execute(text("SHOW COLUMNS FROM users LIKE 'role'")).fetchall()
+        if not cols:
+            conn.execute(
+                text(
+                    "ALTER TABLE users "
+                    "ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT 'user', "
+                    "ADD COLUMN is_active TINYINT(1) NOT NULL DEFAULT 1"
+                )
+            )
+            conn.commit()
+            print("[migrate] users 表已新增 role / is_active 列")
+        admins = conn.execute(text("SELECT COUNT(*) FROM users WHERE role='admin'")).scalar()
+        if admins == 0:
+            first = conn.execute(text("SELECT id, username FROM users ORDER BY id LIMIT 1")).fetchone()
+            if first:
+                conn.execute(text("UPDATE users SET role='admin' WHERE id=:i"), {"i": first[0]})
+                conn.commit()
+                print(f"[migrate] 已将用户 {first[1]} 设为管理员")
+
+
 def _create_tables_and_seed():
     Base.metadata.create_all(bind=engine)
+    _ensure_user_role_schema()
     db = SessionLocal()
     try:
         seed_if_empty(db)
@@ -78,6 +104,7 @@ app.add_middleware(
 app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 
 app.include_router(auth.router)
+app.include_router(admin_users.router)
 app.include_router(vehicles.router)
 app.include_router(maintenance.router)
 app.include_router(refuels.router)

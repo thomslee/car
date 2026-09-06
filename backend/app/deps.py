@@ -23,6 +23,15 @@ def get_current_user(
     user = db.get(User, int(payload["sub"]))
     if user is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "用户不存在")
+    if not user.is_active:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "账号已被禁用，请联系管理员")
+    return user
+
+
+def get_current_admin(user: User = Depends(get_current_user)) -> User:
+    """仅管理员可访问"""
+    if user.role != "admin":
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "需要管理员权限")
     return user
 
 

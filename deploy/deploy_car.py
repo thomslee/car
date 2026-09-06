@@ -15,7 +15,6 @@ import paramiko
 LOCAL_BACKEND = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + r"\backend"
 LOCAL_DIST = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + r"\frontend\dist"
 REMOTE_BACKEND = "/home/ubuntu/car/backend"
-REMOTE_RELEASE_DIR = "/var/www/car/releases/v1"
 
 # 上传时排除的目录/文件
 EXCLUDE_DIRS = {".venv", "__pycache__", "data", ".git"}
@@ -60,11 +59,13 @@ def main():
     p.add_argument("--host", required=True)
     p.add_argument("--user", default="ubuntu")
     p.add_argument("--password", required=True)
+    p.add_argument("--release", default="v1", help="前端发布版本目录，如 v2")
     sub = p.add_subparsers(dest="action", required=True)
 
     r = sub.add_parser("run"); r.add_argument("cmd", nargs="+")
     u = sub.add_parser("upload_backend")
     f = sub.add_parser("upload_frontend")
+    f.add_argument("--release", default="v1", help="前端发布版本目录，如 v2")
     sub.add_parser("deploy_all")
 
     args = p.parse_args()
@@ -79,11 +80,12 @@ def main():
             sftp.close()
             print("backend 上传完成")
         elif args.action == "upload_frontend":
+            release_dir = f"/var/www/car/releases/{args.release}"
             sftp = cli.open_sftp()
-            print("上传 dist ->", REMOTE_RELEASE_DIR)
-            upload_dir(sftp, LOCAL_DIST, REMOTE_RELEASE_DIR)
+            print("上传 dist ->", release_dir)
+            upload_dir(sftp, LOCAL_DIST, release_dir)
             sftp.close()
-            print(run(cli, f"ln -sfn {REMOTE_RELEASE_DIR} /var/www/car/current && readlink /var/www/car/current"))
+            print(run(cli, f"ln -sfn {release_dir} /var/www/car/current && readlink /var/www/car/current"))
             print("frontend 上传并切换 current 完成")
         elif args.action == "deploy_all":
             sftp = cli.open_sftp()

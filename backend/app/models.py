@@ -25,6 +25,8 @@ class User(Base):
     username = Column(String(50), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)
     display_name = Column(String(50), default="")
+    role = Column(String(20), default="user", nullable=False)  # admin / user
+    is_active = Column(Boolean, default=True, nullable=False)  # False=已禁用
     created_at = Column(DateTime, default=datetime.now)
 
     vehicles = relationship("Vehicle", back_populates="owner")

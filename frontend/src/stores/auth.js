@@ -7,16 +7,16 @@ export const useAuthStore = defineStore('auth', {
     user: JSON.parse(localStorage.getItem('car_user') || 'null')
   }),
   getters: {
-    isLogin: (s) => !!s.token
+    isLogin: (s) => !!s.token,
+    isAdmin: (s) => s.user?.role === 'admin'
   },
   actions: {
     async login(username, password) {
       const data = await api.post('/auth/login', { username, password })
       this._set(data)
     },
-    async register(username, password, display_name) {
-      const data = await api.post('/auth/register', { username, password, display_name })
-      this._set(data)
+    async changePassword(old_password, new_password) {
+      await api.put('/auth/change-password', { old_password, new_password })
     },
     _set(data) {
       this.token = data.token

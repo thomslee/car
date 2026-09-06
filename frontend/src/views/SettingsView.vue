@@ -4,6 +4,9 @@
     <van-cell-group inset>
       <van-cell title="当前账号" :value="auth.user?.display_name || auth.user?.username" />
       <van-cell title="用户名" :value="auth.user?.username" />
+      <van-cell title="角色" :value="auth.isAdmin ? '管理员' : '普通用户'" />
+      <van-cell is-link title="修改密码" @click="openPwd" />
+      <van-cell v-if="auth.isAdmin" is-link title="用户管理" @click="router.push('/users')" />
       <van-cell is-link title="退出登录" @click="onLogout" />
     </van-cell-group>
 
@@ -27,6 +30,22 @@
     <div style="font-size:11px;color:#969799;padding:12px 16px;line-height:1.6;">
       部署目标：腾讯云服务器，端口 8090。AI 分析数据为规则引擎结果，价格区间为估算，实际以门店报价为准。
     </div>
+
+    <van-popup v-model:show="pwdPopup" position="bottom" round>
+      <div style="padding:16px;">
+        <div style="font-size:16px;font-weight:600;margin-bottom:12px;">修改密码</div>
+        <van-form @submit="onChangePwd">
+          <van-cell-group inset>
+            <van-field v-model="cpwd.old_password" type="password" label="原密码" placeholder="请输入原密码" :rules="[{ required: true, message: '必填' }]" />
+            <van-field v-model="cpwd.new_password" type="password" label="新密码" placeholder="至少 6 位" :rules="[{ required: true, message: '必填' }, { validator: (v) => v.length >= 6, message: '至少 6 位' }]" />
+            <van-field v-model="cpwd.confirm" type="password" label="确认新密码" placeholder="再次输入新密码" :rules="[{ required: true, message: '必填' }, { validator: (v) => v === cpwd.new_password, message: '两次输入不一致' }]" />
+          </van-cell-group>
+          <div style="margin:16px;">
+            <van-button round block type="primary" native-type="submit" :loading="pwdSaving">确认修改</van-button>
+          </div>
+        </van-form>
+      </div>
+    </van-popup>
 
     <van-popup v-model:show="popup" position="bottom" round>
       <div style="padding:16px;">
@@ -76,9 +95,27 @@ const popup = ref(false)
 const editingId = ref(null)
 const saving = ref(false)
 const pform = ref(blank())
+const pwdPopup = ref(false)
+const pwdSaving = ref(false)
+const cpwd = ref({ old_password: '', new_password: '', confirm: '' })
 
 function blank() {
   return { name: '', base_url: '', api_key: '', model_name: '', capabilities: 'text', is_enabled: false, is_default: false }
+}
+
+function openPwd() {
+  cpwd.value = { old_password: '', new_password: '', confirm: '' }
+  pwdPopup.value = true
+}
+async function onChangePwd() {
+  pwdSaving.value = true
+  try {
+    await auth.changePassword(cpwd.value.old_password, cpwd.value.new_password)
+    showSuccessToast('密码已修改，请重新登录')
+    pwdPopup.value = false
+    auth.logout()
+    router.push('/login')
+  } catch (e) { showFailToast(e.message) } finally { pwdSaving.value = false }
 }
 
 onMounted(load)
