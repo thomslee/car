@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..deps import get_current_user, get_vehicle_or_404
-from ..models import MaintenanceItem, MaintenanceRecord, User, Vehicle
+from ..models import MaintenanceDiscount, MaintenanceItem, MaintenanceRecord, User, Vehicle
 from ..schemas import MaintenanceIn, MaintenanceOut
 
 router = APIRouter(prefix="/api/maintenance", tags=["maintenance"])
@@ -38,12 +38,19 @@ def create_maintenance(body: MaintenanceIn, user: User = Depends(get_current_use
         title=body.title,
         description=body.description,
         total_cost=body.total_cost,
+        original_total_cost=body.original_total_cost,
+        discount_amount=body.discount_amount,
+        paid_amount=body.paid_amount,
+        confirmed_at=body.confirmed_at,
+        skipped_note=body.skipped_note,
         invoice_no=body.invoice_no,
         warranty=body.warranty,
         notes=body.notes,
     )
     for it in body.items:
         rec.items.append(MaintenanceItem(**it.model_dump()))
+    for d in body.discounts:
+        rec.discounts.append(MaintenanceDiscount(**d.model_dump()))
     db.add(rec)
     _sync_mileage(db, rec)
     db.commit()
@@ -59,13 +66,16 @@ def get_maintenance(record_id: int, user: User = Depends(get_current_user), db: 
 @router.put("/{record_id}", response_model=MaintenanceOut)
 def update_maintenance(record_id: int, body: MaintenanceIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     rec = _get_owned(db, record_id, user)
-    for k, val in body.model_dump(exclude={"items"}).items():
+    for k, val in body.model_dump(exclude={"items", "discounts"}).items():
         setattr(rec, k, val)
     # 重建明细
     rec.items.clear()
+    rec.discounts.clear()
     db.flush()
     for it in body.items:
         rec.items.append(MaintenanceItem(**it.model_dump()))
+    for d in body.discounts:
+        rec.discounts.append(MaintenanceDiscount(**d.model_dump()))
     _sync_mileage(db, rec)
     db.commit()
     db.refresh(rec)

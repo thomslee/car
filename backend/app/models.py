@@ -85,6 +85,11 @@ class MaintenanceRecord(Base):
     title = Column(String(100), default="")
     description = Column(Text, default="")
     total_cost = Column(Numeric(10, 2), default=0)
+    original_total_cost = Column(Numeric(10, 2), default=0)  # 原价合计
+    discount_amount = Column(Numeric(10, 2), default=0)  # 折扣金额（正数）
+    paid_amount = Column(Numeric(10, 2), default=0)  # 已支付
+    confirmed_at = Column(DateTime, nullable=True)  # 客户确认时间
+    skipped_note = Column(Text, default="")  # 本次未做项目
     invoice_no = Column(String(50), default="")
     warranty = Column(Boolean, default=False)  # 是否质保内
     notes = Column(Text, default="")
@@ -97,6 +102,12 @@ class MaintenanceRecord(Base):
         cascade="all, delete-orphan",
         order_by="MaintenanceItem.id",
     )
+    discounts = relationship(
+        "MaintenanceDiscount",
+        back_populates="record",
+        cascade="all, delete-orphan",
+        order_by="MaintenanceDiscount.id",
+    )
 
 
 class MaintenanceItem(Base):
@@ -104,14 +115,28 @@ class MaintenanceItem(Base):
 
     id = Column(Integer, primary_key=True)
     record_id = Column(Integer, ForeignKey("maintenance_records.id"), nullable=False, index=True)
+    item_type = Column(String(10), default="材料")  # 材料/工时
     item_name = Column(String(100), nullable=False)
     quantity = Column(Numeric(6, 2), default=1)
+    unit_price = Column(Numeric(10, 2), default=0)  # 单价
     part_cost = Column(Numeric(10, 2), default=0)
     labor_cost = Column(Numeric(10, 2), default=0)
+    is_original = Column(Boolean, default=False)  # 是否原厂件（材料类）
     is_routine = Column(Boolean, default=True)  # 是否定期保养项
     note = Column(String(200), default="")
 
     record = relationship("MaintenanceRecord", back_populates="items")
+
+
+class MaintenanceDiscount(Base):
+    __tablename__ = "maintenance_discounts"
+
+    id = Column(Integer, primary_key=True)
+    record_id = Column(Integer, ForeignKey("maintenance_records.id"), nullable=False, index=True)
+    name = Column(String(100), nullable=False)  # 折扣名称
+    amount = Column(Numeric(10, 2), default=0)  # 折扣金额（正数）
+
+    record = relationship("MaintenanceRecord", back_populates="discounts")
 
 
 class RefuelRecord(Base):

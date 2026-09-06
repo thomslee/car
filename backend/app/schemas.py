@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Pydantic 出入参"""
-from datetime import date
+from datetime import date, datetime
 from typing import Any, Optional
 
 from pydantic import BaseModel, Field
@@ -88,12 +88,27 @@ class MileageIn(BaseModel):
 
 # ---------- 保养维修 ----------
 class MaintenanceItemIn(BaseModel):
+    item_type: str = "材料"  # 材料/工时
     item_name: str
     quantity: float = 1
+    unit_price: float = 0
     part_cost: float = 0
     labor_cost: float = 0
+    is_original: bool = False
     is_routine: bool = True
     note: str = ""
+
+
+class MaintenanceDiscountIn(BaseModel):
+    name: str
+    amount: float = 0
+
+
+class MaintenanceDiscountOut(MaintenanceDiscountIn):
+    id: int
+
+    class Config:
+        from_attributes = True
 
 
 class MaintenanceIn(BaseModel):
@@ -106,10 +121,16 @@ class MaintenanceIn(BaseModel):
     title: str = ""
     description: str = ""
     total_cost: float = 0
+    original_total_cost: float = 0
+    discount_amount: float = 0
+    paid_amount: float = 0
+    confirmed_at: Optional[datetime] = None
+    skipped_note: str = ""
     invoice_no: str = ""
     warranty: bool = False
     notes: str = ""
     items: list[MaintenanceItemIn] = []
+    discounts: list[MaintenanceDiscountIn] = []
 
 
 class MaintenanceItemOut(MaintenanceItemIn):
@@ -130,11 +151,17 @@ class MaintenanceOut(BaseModel):
     title: str
     description: str
     total_cost: float
+    original_total_cost: float = 0
+    discount_amount: float = 0
+    paid_amount: float = 0
+    confirmed_at: Any = None
+    skipped_note: str = ""
     invoice_no: str
     warranty: bool
     notes: str
     created_at: Any = None
     items: list[MaintenanceItemOut] = []
+    discounts: list[MaintenanceDiscountOut] = []
 
     class Config:
         from_attributes = True

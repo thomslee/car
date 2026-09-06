@@ -14,9 +14,19 @@ _EXTRACT_USER = (
     "请从以下保养单文本中抽取字段，输出 JSON：\n"
     '{{"occurred_at":"日期(YYYY-MM-DD，找不到填null)","mileage":里程数字(找不到填null),'
     '"shop_name":"门店名称","record_type":"保养或维修","category":"类别",'
-    '"total_cost":总费用数字(找不到填null),"items":[{{"item_name":"项目名称",'
-    '"quantity":数量,"part_cost":材料费,"labor_cost":工时费}}]}}\n'
-    "项目名尽量规范（如：机油及机油滤清器、空调滤芯、火花塞）。"
+    '"total_cost":总费用/实付金额数字(找不到填null),'
+    '"original_total_cost":原价合计数字(找不到填null),'
+    '"discount_amount":折扣金额数字(正数，找不到填null),'
+    '"discounts":[{{"name":"折扣名称如基础保养券/忠诚守候券/续保抵扣","amount":折扣金额数字(正数)}}],'
+    '"paid_amount":已支付金额数字(找不到填null),'
+    '"confirmed_at":"客户确认时间(YYYY-MM-DD HH:MM，找不到填null)",'
+    '"skipped_note":"本次未做项目文字说明(没有则填空字符串)",'
+    '"items":[{{"item_type":"材料或工时","item_name":"项目名称",'
+    '"quantity":数量(工时类填工时数如0.4/0.6/0.8),"unit_price":单价数字,'
+    '"part_cost":材料费小计(工时类填0),"labor_cost":工时费小计(材料类填0),'
+    '"is_original":是否原厂件(true/false，仅材料类)}}]}}\n'
+    "项目名尽量规范（如：机油及机油滤清器、空调滤芯、火花塞、更换制动衬片）。"
+    "材料和工时分条列出，不要合并。"
     "无法确定的字段填 null，不要编造。\n\n保养单文本：\n{text}"
 )
 
@@ -69,5 +79,11 @@ def _empty_draft() -> dict:
         "record_type": "保养",
         "category": "",
         "total_cost": None,
+        "original_total_cost": None,
+        "discount_amount": None,
+        "discounts": [],
+        "paid_amount": None,
+        "confirmed_at": None,
+        "skipped_note": "",
         "items": [],
     }

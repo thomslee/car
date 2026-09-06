@@ -54,9 +54,37 @@ def _ensure_user_role_schema():
                 print(f"[migrate] 已将用户 {first[1]} 设为管理员")
 
 
+def _ensure_maintenance_schema():
+    """幂等迁移：保养记录/项目表补充新列，折扣表由 create_all 自动建。"""
+    record_cols = {
+        "original_total_cost": "DECIMAL(10,2) NOT NULL DEFAULT 0",
+        "discount_amount": "DECIMAL(10,2) NOT NULL DEFAULT 0",
+        "paid_amount": "DECIMAL(10,2) NOT NULL DEFAULT 0",
+        "confirmed_at": "DATETIME NULL DEFAULT NULL",
+        "skipped_note": "TEXT",
+    }
+    item_cols = {
+        "item_type": "VARCHAR(10) NOT NULL DEFAULT '材料'",
+        "is_original": "TINYINT(1) NOT NULL DEFAULT 0",
+        "unit_price": "DECIMAL(10,2) NOT NULL DEFAULT 0",
+    }
+    with engine.connect() as conn:
+        for col, ddl in record_cols.items():
+            if not conn.execute(text(f"SHOW COLUMNS FROM maintenance_records LIKE '{col}'")).fetchall():
+                conn.execute(text(f"ALTER TABLE maintenance_records ADD COLUMN {col} {ddl}"))
+                conn.commit()
+                print(f"[migrate] maintenance_records 已新增 {col}")
+        for col, ddl in item_cols.items():
+            if not conn.execute(text(f"SHOW COLUMNS FROM maintenance_items LIKE '{col}'")).fetchall():
+                conn.execute(text(f"ALTER TABLE maintenance_items ADD COLUMN {col} {ddl}"))
+                conn.commit()
+                print(f"[migrate] maintenance_items 已新增 {col}")
+
+
 def _create_tables_and_seed():
     Base.metadata.create_all(bind=engine)
     _ensure_user_role_schema()
+    _ensure_maintenance_schema()
     db = SessionLocal()
     try:
         seed_if_empty(db)

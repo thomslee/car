@@ -15,7 +15,7 @@
           <template #value>
             <div style="text-align:right;">
               <div style="font-size:18px;font-weight:700;">¥{{ rec.total_cost }}</div>
-              <div style="font-size:11px;color:#969799;">总费用</div>
+              <div style="font-size:11px;color:#969799;">总金额</div>
             </div>
           </template>
         </van-cell>
@@ -38,10 +38,16 @@
 
       <!-- 项目明细 -->
       <van-cell-group inset title="项目明细" style="margin-top:12px;">
-        <van-cell v-for="it in rec.items" :key="it.id" :title="it.item_name">
-          <template #label>
-            <div style="margin-top:2px;">
-              数量 {{ it.quantity }}<span v-if="it.part_cost"> · 材料 ¥{{ it.part_cost }}</span><span v-if="it.labor_cost"> · 工时 ¥{{ it.labor_cost }}</span>
+        <van-cell v-for="it in rec.items" :key="it.id" center>
+          <template #title>
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+              <span style="font-weight:600;">{{ it.item_name }}</span>
+              <van-tag :type="it.item_type === '工时' ? 'warning' : 'primary'" size="small">{{ it.item_type || '材料' }}</van-tag>
+              <van-tag v-if="it.is_original" type="success" size="small">原厂件</van-tag>
+            </div>
+            <div style="font-size:12px;color:#969799;margin-top:2px;">
+              数量 {{ it.quantity }}<span v-if="it.unit_price"> · 单价 ¥{{ it.unit_price }}</span>
+              <span v-if="it.part_cost"> · 材料 ¥{{ it.part_cost }}</span><span v-if="it.labor_cost"> · 工时 ¥{{ it.labor_cost }}</span>
             </div>
           </template>
           <template #value>
@@ -49,6 +55,32 @@
           </template>
         </van-cell>
         <van-cell v-if="!rec.items.length" title="无项目明细" />
+      </van-cell-group>
+
+      <!-- 费用结算 -->
+      <van-cell-group inset title="费用结算" style="margin-top:12px;">
+        <van-cell title="原价合计" :value="'¥' + (rec.original_total_cost || 0)" />
+        <van-cell title="折扣金额" is-link @click="showDiscounts = !showDiscounts">
+          <template #value>
+            <span style="color:#ee0a24;">-¥{{ rec.discount_amount || 0 }}</span>
+          </template>
+        </van-cell>
+        <div v-if="showDiscounts && rec.discounts && rec.discounts.length" style="background:#f7f8fa;padding:8px 16px;">
+          <div v-for="d in rec.discounts" :key="d.id" style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;color:#646566;">
+            <span>{{ d.name }}</span>
+            <span style="color:#ee0a24;">-¥{{ d.amount }}</span>
+          </div>
+        </div>
+        <van-cell title="总金额" :value="'¥' + (rec.total_cost || 0)">
+          <template #title><span style="font-weight:600;">总金额</span></template>
+        </van-cell>
+        <van-cell title="已支付" :value="'¥' + (rec.paid_amount || 0)" />
+        <van-cell title="客户确认时间" :value="formatDateTime(rec.confirmed_at)" v-if="rec.confirmed_at" />
+      </van-cell-group>
+
+      <!-- 本次未做项目 -->
+      <van-cell-group v-if="rec.skipped_note" inset title="本次未做项目" style="margin-top:12px;">
+        <div style="padding:12px 16px;font-size:13px;color:#323233;white-space:pre-wrap;">{{ rec.skipped_note }}</div>
       </van-cell-group>
 
       <!-- 备注 -->
@@ -87,6 +119,7 @@ const vehicleId = route.params.id
 const mid = route.params.mid
 const rec = ref(null)
 const loading = ref(true)
+const showDiscounts = ref(false)
 const attachments = ref([])
 const previewShow = ref(false)
 const previewIndex = ref(0)
@@ -94,6 +127,11 @@ const previewImages = ref([])
 
 function typeColor(t) {
   return { 保养: 'primary', 维修: 'danger', 年检: 'warning', 其他: 'default' }[t] || 'default'
+}
+
+function formatDateTime(v) {
+  if (!v) return ''
+  return String(v).replace('T', ' ').replace(/\.\d+$/, '').slice(0, 16)
 }
 
 onMounted(async () => {

@@ -29,9 +29,19 @@
             </van-radio-group>
           </template>
         </van-field>
-        <van-field v-model.number="draft.total_cost" type="number" label="总费用" placeholder="元" />
         <van-field label="项目明细" type="textarea" rows="3" autosize :model-value="itemsText"
                    placeholder="每行一个：项目名 材料费 工时费" @update:model-value="setItemsText" />
+      </van-cell-group>
+
+      <van-cell-group inset title="费用（手填）" style="margin-top:12px;">
+        <van-field v-model.number="draft.original_total_cost" type="number" label="原价合计" placeholder="0" />
+        <van-field v-model.number="draft.discount_amount" type="number" label="折扣金额" placeholder="0（正数）" />
+        <van-field label="折扣明细" type="textarea" rows="2" autosize :model-value="discountsText"
+                   placeholder="每行一个：名称 金额" @update:model-value="setDiscountsText" />
+        <van-field v-model.number="draft.total_cost" type="number" label="总金额" placeholder="0" />
+        <van-field v-model.number="draft.paid_amount" type="number" label="已支付" placeholder="0" />
+        <van-field v-model="draft.confirmed_at" label="确认时间" placeholder="YYYY-MM-DD HH:MM" />
+        <van-field v-model="draft.skipped_note" label="未做项目" type="textarea" rows="2" autosize placeholder="选填" />
       </van-cell-group>
 
       <div style="display:flex;gap:8px;margin:16px 0;">
@@ -74,14 +84,36 @@ const itemsText = computed({
   set: () => {}
 })
 
+const discountsText = computed({
+  get: () => (draft.value?.discounts || []).map(d => `${d.name || ''} ${d.amount || 0}`).join('\n'),
+  set: () => {}
+})
+
 function setItemsText(text) {
-  draft.value.items = text.split('\n').map(line => {
+  const oldItems = draft.value.items || []
+  draft.value.items = text.split('\n').map((line, idx) => {
     const parts = line.trim().split(/\s+/)
     const name = parts[0] || ''
     const part = parseFloat(parts[1]) || 0
     const labor = parseFloat(parts[2]) || 0
-    return { item_name: name, quantity: 1, part_cost: part, labor_cost: labor, is_routine: true }
+    const old = oldItems[idx] || {}
+    return {
+      item_name: name, quantity: 1,
+      item_type: old.item_type || '材料',
+      unit_price: Number(old.unit_price) || 0,
+      part_cost: part, labor_cost: labor,
+      is_original: !!old.is_original, is_routine: true
+    }
   }).filter(i => i.item_name)
+}
+
+function setDiscountsText(text) {
+  draft.value.discounts = text.split('\n').map(line => {
+    const parts = line.trim().split(/\s+/)
+    const name = parts.slice(0, -1).join(' ') || ''
+    const amount = parseFloat(parts[parts.length - 1]) || 0
+    return { name, amount }
+  }).filter(d => d.name)
 }
 
 async function onUpload(item) {
@@ -115,10 +147,23 @@ function normalizeDraft(d) {
     mileage: d.mileage || null,
     shop_name: d.shop_name || '',
     record_type: d.record_type === '维修' ? '维修' : '保养',
-    total_cost: d.total_cost || 0,
+    total_cost: Number(d.total_cost) || 0,
+    original_total_cost: Number(d.original_total_cost) || 0,
+    discount_amount: Number(d.discount_amount) || 0,
+    paid_amount: Number(d.paid_amount) || 0,
+    confirmed_at: d.confirmed_at || '',
+    skipped_note: d.skipped_note || '',
+    discounts: Array.isArray(d.discounts) && d.discounts.length
+      ? d.discounts.map(x => ({ name: x.name || '', amount: Number(x.amount) || 0 }))
+      : [],
     items: Array.isArray(d.items) && d.items.length
-      ? d.items.map(i => ({ item_name: i.item_name || '', quantity: 1, part_cost: Number(i.part_cost) || 0, labor_cost: Number(i.labor_cost) || 0, is_routine: true }))
-      : [{ item_name: '', quantity: 1, part_cost: 0, labor_cost: 0, is_routine: true }]
+      ? d.items.map(i => ({
+          item_name: i.item_name || '', quantity: Number(i.quantity) || 1,
+          item_type: i.item_type || '材料', unit_price: Number(i.unit_price) || 0,
+          part_cost: Number(i.part_cost) || 0, labor_cost: Number(i.labor_cost) || 0,
+          is_original: !!i.is_original, is_routine: true
+        }))
+      : [{ item_name: '', quantity: 1, item_type: '材料', unit_price: 0, part_cost: 0, labor_cost: 0, is_original: false, is_routine: true }]
   }
 }
 
@@ -152,6 +197,7 @@ async function onSave() {
   saving.value = true
   try {
     const items = (draft.value.items || []).filter(i => i.item_name)
+    const discounts = (draft.value.discounts || []).filter(d => d.name)
     await api.post('/maintenance', {
       vehicle_id: Number(vehicleId),
       occurred_at: draft.value.occurred_at,
@@ -160,8 +206,13 @@ async function onSave() {
       record_type: draft.value.record_type,
       category: '',
       title: `${draft.value.record_type}记录`,
-      total_cost: draft.value.total_cost || items.reduce((s, i) => s + i.part_cost + i.labor_cost, 0),
-      items
+      total_cost: draft.value.total_cost || 0,
+      original_total_cost: draft.value.original_total_cost || 0,
+      discount_amount: draft.value.discount_amount || 0,
+      paid_amount: draft.value.paid_amount || 0,
+      confirmed_at: draft.value.confirmed_at || null,
+      skipped_note: draft.value.skipped_note || '',
+      items, discounts
     })
     showSuccessToast('已保存')
     router.push(`/vehicle/${vehicleId}/maintenance`)
