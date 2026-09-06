@@ -12,10 +12,10 @@ _EXTRACT_SYSTEM = (
 )
 _EXTRACT_USER = (
     "请从以下保养单文本中抽取字段，输出 JSON：\n"
-    '{"occurred_at":"日期(YYYY-MM-DD，找不到填null)","mileage":里程数字(找不到填null),'
+    '{{"occurred_at":"日期(YYYY-MM-DD，找不到填null)","mileage":里程数字(找不到填null),'
     '"shop_name":"门店名称","record_type":"保养或维修","category":"类别",'
-    '"total_cost":总费用数字(找不到填null),"items":[{"item_name":"项目名称",'
-    '"quantity":数量,"part_cost":材料费,"labor_cost":工时费}]}\n'
+    '"total_cost":总费用数字(找不到填null),"items":[{{"item_name":"项目名称",'
+    '"quantity":数量,"part_cost":材料费,"labor_cost":工时费}}]}}\n'
     "项目名尽量规范（如：机油及机油滤清器、空调滤芯、火花塞）。"
     "无法确定的字段填 null，不要编造。\n\n保养单文本：\n{text}"
 )

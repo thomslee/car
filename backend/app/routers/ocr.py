@@ -10,13 +10,23 @@ from sqlalchemy.orm import Session
 from ..config import UPLOAD_DIR
 from ..database import get_db
 from ..deps import get_current_user
-from ..models import OcrTask, User
+from ..models import AiProvider, OcrTask, User
 from ..schemas import LoginIn  # noqa: F401  (保持导入一致性，无实际用途)
 from ..services import llm_service, ocr_service
 
 router = APIRouter(prefix="/api/ocr", tags=["ocr"])
 
 ALLOWED_EXT = {".jpg", ".jpeg", ".png", ".webp", ".heic"}
+
+
+def _vision_provider(db: Session):
+    """拍照识别优先选已启用的视觉模型；没有则回退默认模型"""
+    p = (
+        db.query(AiProvider)
+        .filter(AiProvider.is_enabled.is_(True), AiProvider.capabilities.contains("vision"))
+        .first()
+    )
+    return p or llm_service.get_default_provider(db)
 
 
 @router.post("/upload")
@@ -36,7 +46,7 @@ def ocr_upload(
         shutil.copyfileobj(file.file, out)
     image_bytes = dest.read_bytes()
 
-    provider = llm_service.get_default_provider(db)
+    provider = _vision_provider(db)
     result = ocr_service.recognize_image(image_bytes, provider)
     task = OcrTask(
         user_id=user.id,
@@ -50,7 +60,9 @@ def ocr_upload(
     db.commit()
 
     if result["mode"] == "text":
-        parsed = ocr_service.extract_from_text(result["text"], provider)
+        parsed = ocr_service.extract_from_text(
+            result["text"], llm_service.get_default_provider(db)
+        )
         task.parsed_json = str(parsed)
         db.commit()
         return {
