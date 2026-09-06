@@ -1,0 +1,25 @@
+services:
+  car-backend:
+    build: .
+    image: car-backend:latest
+    container_name: car-backend
+    volumes:
+      - ./data:/app/data
+    ports:
+      - "127.0.0.1:8091:8091"
+    environment:
+      CAR_DB_HOST: news-mysql
+      CAR_DB_PORT: "3306"
+      CAR_DB_USER: root
+      CAR_DB_PASSWORD: "123456"
+      CAR_DB_NAME: car_system
+      # 生产环境必须改为随机长字符串（线上已用随机值；泄露可伪造登录令牌）
+      CAR_JWT_SECRET: "change-me-to-a-random-long-string"
+    restart: unless-stopped
+    networks:
+      - car-net
+
+networks:
+  car-net:
+    name: news_news_net
+    external: true
