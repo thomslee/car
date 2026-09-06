@@ -46,12 +46,11 @@
               <van-tag v-if="it.is_original" type="success" size="small">原厂件</van-tag>
             </div>
             <div style="font-size:12px;color:#969799;margin-top:2px;">
-              数量 {{ it.quantity }}<span v-if="it.unit_price"> · 单价 ¥{{ it.unit_price }}</span>
-              <span v-if="it.part_cost"> · 材料 ¥{{ it.part_cost }}</span><span v-if="it.labor_cost"> · 工时 ¥{{ it.labor_cost }}</span>
+              数量 {{ it.quantity }} · 单价 ¥{{ Number(it.unit_price) || 0 }} · 材料 ¥{{ Number(it.part_cost) || 0 }} · 工时 ¥{{ Number(it.labor_cost) || 0 }}
             </div>
           </template>
           <template #value>
-            <span v-if="it.part_cost || it.labor_cost" style="font-weight:600;">¥{{ (Number(it.part_cost) || 0) + (Number(it.labor_cost) || 0) }}</span>
+            <span style="font-weight:600;">¥{{ (Number(it.part_cost) || 0) + (Number(it.labor_cost) || 0) }}</span>
           </template>
         </van-cell>
         <van-cell v-if="!rec.items.length" title="无项目明细" />
