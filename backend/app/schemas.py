@@ -155,7 +155,7 @@ class MaintenanceOut(BaseModel):
     discount_amount: float = 0
     paid_amount: float = 0
     confirmed_at: Any = None
-    skipped_note: str = ""
+    skipped_note: Optional[str] = ""
     invoice_no: str
     warranty: bool
     notes: str

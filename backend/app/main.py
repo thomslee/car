@@ -61,7 +61,7 @@ def _ensure_maintenance_schema():
         "discount_amount": "DECIMAL(10,2) NOT NULL DEFAULT 0",
         "paid_amount": "DECIMAL(10,2) NOT NULL DEFAULT 0",
         "confirmed_at": "DATETIME NULL DEFAULT NULL",
-        "skipped_note": "TEXT",
+        "skipped_note": "TEXT NOT NULL DEFAULT ''",
     }
     item_cols = {
         "item_type": "VARCHAR(10) NOT NULL DEFAULT '材料'",
