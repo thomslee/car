@@ -15,21 +15,15 @@
       </van-empty>
 
       <van-cell-group inset v-for="r in records" :key="r.id" style="margin-top:10px;">
-        <van-cell is-link @click="router.push(`/vehicle/${vehicleId}/maintenance/${r.id}/edit`)">
+        <van-cell is-link center @click="router.push(`/vehicle/${vehicleId}/maintenance/${r.id}`)">
           <template #title>
-            <div style="display:flex;align-items:center;gap:6px;">
-              <van-tag :type="typeColor(r.record_type)" size="medium">{{ r.record_type }}</van-tag>
-              <span style="font-weight:600;">{{ r.title || r.category || '保养记录' }}</span>
-            </div>
-            <div style="font-size:12px;color:#969799;margin-top:4px;">
-              {{ r.occurred_at }} · {{ r.mileage }}km · {{ r.shop_name || '未填门店' }}
-            </div>
-            <div v-if="r.items.length" style="font-size:12px;color:#969799;margin-top:2px;">
-              {{ r.items.map(i => i.item_name).join('、') }}
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-weight:600;font-size:15px;">{{ r.occurred_at }}</span>
+              <van-tag :type="typeColor(r.record_type)" size="small">{{ r.record_type }}</van-tag>
             </div>
           </template>
           <template #value>
-            <span style="font-weight:600;">¥{{ r.total_cost }}</span>
+            <span style="font-weight:600;font-size:15px;">¥{{ r.total_cost }}</span>
           </template>
         </van-cell>
       </van-cell-group>

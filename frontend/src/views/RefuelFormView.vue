@@ -32,6 +32,7 @@
 
     <div style="margin:24px 16px;">
       <van-button round block type="primary" native-type="submit" :loading="loading">保 存</van-button>
+      <van-button v-if="recordId" round block plain type="danger" style="margin-top:8px;" icon="delete-o" @click="onDelete">删 除</van-button>
     </div>
   </van-form>
 </template>
@@ -39,7 +40,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { showSuccessToast, showFailToast } from 'vant'
+import { showSuccessToast, showFailToast, showConfirmDialog } from 'vant'
 import api from '../api'
 
 const route = useRoute()
@@ -99,6 +100,17 @@ async function onSubmit() {
     showFailToast(e.message)
   } finally {
     loading.value = false
+  }
+}
+
+async function onDelete() {
+  try {
+    await showConfirmDialog({ title: '删除记录', message: '删除后不可恢复，确定删除这笔加油记录？' })
+    await api.delete(`/refuels/${recordId}`)
+    showSuccessToast('已删除')
+    router.back()
+  } catch (e) {
+    if (e !== 'cancel') showFailToast(e.message || '已取消')
   }
 }
 </script>
