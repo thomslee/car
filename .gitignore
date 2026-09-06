@@ -20,3 +20,6 @@ backend/test_ai_deepseek.py
 # ---------- 系统文件 ----------
 Thumbs.db
 .DS_Store
+
+# 个人单据图片（勿入库）
+保养记录.png
