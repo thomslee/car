@@ -1,0 +1,268 @@
+# -*- coding: utf-8 -*-
+"""Pydantic 出入参"""
+from datetime import date
+from typing import Any, Optional
+
+from pydantic import BaseModel, Field
+
+
+# ---------- 认证 ----------
+class RegisterIn(BaseModel):
+    username: str = Field(min_length=3, max_length=50)
+    password: str = Field(min_length=6, max_length=100)
+    display_name: str = ""
+
+
+class LoginIn(BaseModel):
+    username: str
+    password: str
+
+
+class UserOut(BaseModel):
+    id: int
+    username: str
+    display_name: str
+
+    class Config:
+        from_attributes = True
+
+
+class TokenOut(BaseModel):
+    token: str
+    user: UserOut
+
+
+# ---------- 车辆 ----------
+class VehicleIn(BaseModel):
+    name: str = ""
+    brand: str = "沃尔沃"
+    series: str = ""
+    model_year: str = ""
+    model_name: str = ""
+    vin: str = ""
+    plate_no: str = ""
+    engine_no: str = ""
+    purchase_date: Optional[date] = None
+    initial_mileage: int = 0
+    current_mileage: int = 0
+    fuel_type: str = "汽油"
+    displacement: str = ""
+    transmission: str = ""
+    color: str = ""
+    notes: str = ""
+
+
+class VehicleOut(VehicleIn):
+    id: int
+    is_active: bool
+    created_at: Any = None
+    updated_at: Any = None
+
+    class Config:
+        from_attributes = True
+
+
+class MileageIn(BaseModel):
+    recorded_at: date
+    mileage: int
+    source: str = "手工"
+    note: str = ""
+
+
+# ---------- 保养维修 ----------
+class MaintenanceItemIn(BaseModel):
+    item_name: str
+    quantity: float = 1
+    part_cost: float = 0
+    labor_cost: float = 0
+    is_routine: bool = True
+    note: str = ""
+
+
+class MaintenanceIn(BaseModel):
+    vehicle_id: int
+    occurred_at: date
+    mileage: int = 0
+    shop_name: str = ""
+    record_type: str = "保养"
+    category: str = ""
+    title: str = ""
+    description: str = ""
+    total_cost: float = 0
+    invoice_no: str = ""
+    warranty: bool = False
+    notes: str = ""
+    items: list[MaintenanceItemIn] = []
+
+
+class MaintenanceItemOut(MaintenanceItemIn):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+
+class MaintenanceOut(BaseModel):
+    id: int
+    vehicle_id: int
+    occurred_at: date
+    mileage: int
+    shop_name: str
+    record_type: str
+    category: str
+    title: str
+    description: str
+    total_cost: float
+    invoice_no: str
+    warranty: bool
+    notes: str
+    created_at: Any = None
+    items: list[MaintenanceItemOut] = []
+
+    class Config:
+        from_attributes = True
+
+
+# ---------- 加油 ----------
+class RefuelIn(BaseModel):
+    vehicle_id: int
+    refueled_at: date
+    mileage: int = 0
+    fuel_amount_l: float = 0
+    unit_price: float = 0
+    total_cost: float = 0
+    station: str = ""
+    fuel_type: str = "汽油"
+    is_full: bool = True
+    note: str = ""
+
+
+class RefuelOut(RefuelIn):
+    id: int
+    created_at: Any = None
+
+    class Config:
+        from_attributes = True
+
+
+# ---------- 保险 ----------
+class InsuranceIn(BaseModel):
+    vehicle_id: int
+    company: str = ""
+    policy_no: str = ""
+    policy_type: str = "商业险"
+    items_json: str = "[]"
+    premium: float = 0
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    attachment: str = ""
+    note: str = ""
+
+
+class InsuranceOut(InsuranceIn):
+    id: int
+    created_at: Any = None
+
+    class Config:
+        from_attributes = True
+
+
+# ---------- 年检 ----------
+class InspectionIn(BaseModel):
+    vehicle_id: int
+    inspected_at: Optional[date] = None
+    expire_at: Optional[date] = None
+    result: str = "合格"
+    station: str = ""
+    cost: float = 0
+    attachment: str = ""
+    note: str = ""
+
+
+class InspectionOut(InspectionIn):
+    id: int
+    created_at: Any = None
+
+    class Config:
+        from_attributes = True
+
+
+# ---------- 违章 ----------
+class ViolationIn(BaseModel):
+    vehicle_id: int
+    occurred_at: Optional[date] = None
+    location: str = ""
+    behavior: str = ""
+    points: int = 0
+    fine: float = 0
+    status: str = "未处理"
+    handle_date: Optional[date] = None
+    attachment: str = ""
+    note: str = ""
+
+
+class ViolationOut(ViolationIn):
+    id: int
+    created_at: Any = None
+
+    class Config:
+        from_attributes = True
+
+
+# ---------- 提醒 ----------
+class ReminderIn(BaseModel):
+    vehicle_id: Optional[int] = None
+    remind_type: str = "自定义"
+    title: str = ""
+    target_date: Optional[date] = None
+    target_mileage: Optional[int] = None
+    threshold_days: int = 30
+    message: str = ""
+
+
+class ReminderOut(BaseModel):
+    id: int
+    vehicle_id: Optional[int]
+    remind_type: str
+    title: str
+    target_date: Optional[date]
+    target_mileage: Optional[int]
+    threshold_days: int
+    message: str
+    status: str
+    created_at: Any = None
+
+    class Config:
+        from_attributes = True
+
+
+class ReminderHandleIn(BaseModel):
+    status: str = "已完成"  # 已完成/已忽略
+
+
+# ---------- 大模型配置 ----------
+class ProviderIn(BaseModel):
+    name: str
+    base_url: str
+    api_key: str = ""
+    model_name: str
+    capabilities: str = "text"
+    is_default: bool = False
+    is_enabled: bool = False
+
+
+class ProviderOut(ProviderIn):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+
+# ---------- AI ----------
+class MaintenancePlanIn(BaseModel):
+    vehicle_id: int
+
+
+class PriceEstimateIn(BaseModel):
+    vehicle_id: int
+    items: list[str] = []

@@ -1,0 +1,65 @@
+<template>
+  <div>
+    <!-- 待办提醒 -->
+    <div v-if="pending.length" style="margin-bottom:12px;">
+      <van-notice-bar left-icon="bell" :scrollable="false" wrapable
+        @click="router.push('/reminders')">
+        <span v-for="(r, i) in pending.slice(0, 3)" :key="r.id">
+          {{ i + 1 }}.{{ r.title }}（{{ r.target_date || '近期' }}）
+        </span>
+      </van-notice-bar>
+    </div>
+
+    <van-skeleton title :row="3" v-if="loading" />
+
+    <template v-else>
+      <van-empty v-if="!vehicles.length" description="还没有车辆，先添加第一辆车吧">
+        <van-button round type="primary" @click="router.push('/vehicle/new')">添加车辆</van-button>
+      </van-empty>
+
+      <div v-for="v in vehicles" :key="v.id" style="margin-bottom:12px;">
+        <van-cell is-link center @click="router.push(`/vehicle/${v.id}`)">
+          <template #title>
+            <div style="font-size:16px;font-weight:600;">{{ v.name || v.brand }}</div>
+            <div style="font-size:12px;color:#969799;margin-top:2px;">
+              {{ v.brand }} {{ v.series }} {{ v.model_name }} · {{ v.plate_no || '未填车牌' }}
+            </div>
+          </template>
+          <template #value>
+            <div style="text-align:right;">
+              <div style="font-size:16px;font-weight:600;">{{ v.current_mileage || 0 }}<span style="font-size:11px;color:#969799;"> km</span></div>
+              <div style="font-size:11px;color:#969799;">点击进入</div>
+            </div>
+          </template>
+        </van-cell>
+      </div>
+
+      <van-button v-if="vehicles.length" round block icon="plus" style="margin-top:8px;"
+        @click="router.push('/vehicle/new')">添加车辆</van-button>
+    </template>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { showFailToast } from 'vant'
+import api from '../api'
+
+const router = useRouter()
+const vehicles = ref([])
+const pending = ref([])
+const loading = ref(true)
+
+onMounted(async () => {
+  try {
+    vehicles.value = await api.get('/vehicles')
+    const reminders = await api.get('/reminders', { params: { status: '待处理' } })
+    pending.value = reminders
+  } catch (e) {
+    showFailToast(e.message)
+  } finally {
+    loading.value = false
+  }
+})
+</script>
