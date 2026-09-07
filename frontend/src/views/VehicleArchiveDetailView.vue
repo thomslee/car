@@ -79,8 +79,7 @@ onMounted(load)
 
 async function load() {
   try {
-    const res = await api.get(`/vehicles/${vehicleId}`)
-    vehicle.value = res.data
+    vehicle.value = await api.get(`/vehicles/${vehicleId}`)
   } finally {
     loading.value = false
   }
