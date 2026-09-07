@@ -152,8 +152,8 @@ def vehicle_summary(vehicle_id: int, user: User = Depends(get_current_user), db:
         ],
         "year_cost": round(year_cost, 2),
         "maintenance_plan": {
-            "next_date": plan["next_maintenance_date"],
-            "next_mileage": plan["next_maintenance_mileage"],
+            "next_date": plan["next_maintenance"]["next_date"],
+            "next_mileage": plan["next_maintenance"]["next_mileage"],
             "due_items": [i["item_name"] for i in plan["due_items"][:5]],
             "monthly_km": plan["monthly_km_estimate"],
         },
