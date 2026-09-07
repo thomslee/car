@@ -172,6 +172,8 @@ class InsurancePolicy(Base):
     premium = Column(Numeric(10, 2), default=0)
     vehicle_tax = Column(Numeric(10, 2), default=0)  # 车船税（仅交强险）
     service_phone = Column(String(30), default="")  # 保险公司服务电话
+    vehicle_model = Column(String(100), default="")  # 车辆厂牌型号
+    plate_no = Column(String(20), default="")  # 车辆牌号
     start_date = Column(Date, nullable=True)
     end_date = Column(Date, nullable=True)
     attachment = Column(String(255), default="")

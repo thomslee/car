@@ -203,6 +203,8 @@ class InsuranceIn(BaseModel):
     premium: float = 0
     vehicle_tax: float = 0
     service_phone: str = ""
+    vehicle_model: str = ""
+    plate_no: str = ""
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     attachment: Optional[str] = ""

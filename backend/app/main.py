@@ -142,6 +142,8 @@ def _ensure_insurance_schema():
     new_cols = {
         "service_phone": "VARCHAR(30) NOT NULL DEFAULT ''",
         "vehicle_tax": "DECIMAL(10,2) NOT NULL DEFAULT 0",
+        "vehicle_model": "VARCHAR(100) NOT NULL DEFAULT ''",
+        "plate_no": "VARCHAR(20) NOT NULL DEFAULT ''",
     }
     with engine.connect() as conn:
         for col, ddl in new_cols.items():

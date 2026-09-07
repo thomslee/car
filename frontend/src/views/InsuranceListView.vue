@@ -5,7 +5,7 @@
       <van-empty v-if="!records.length" description="还没有保单" />
       <van-cell-group inset v-for="p in records" :key="p.id" style="margin-top:10px;">
         <van-cell :title="p.company + ' · ' + p.policy_type"
-                  :label="`${p.start_date || '?'} ~ ${p.end_date || '?'} · 保费¥${p.premium}${p.vehicle_tax ? ' · 车船税¥' + p.vehicle_tax : ''}${p.service_phone ? ' · 客服' + p.service_phone : ''}`"
+                  :label="`${p.plate_no ? p.plate_no + ' · ' : ''}${p.start_date || '?'} ~ ${p.end_date || '?'} · 保费¥${p.premium}${p.vehicle_tax ? ' · 车船税¥' + p.vehicle_tax : ''}${p.service_phone ? ' · 客服' + p.service_phone : ''}`"
                   is-link @click="goDetail(p)">
           <template #value>
             <van-tag :type="expiring(p.end_date) ? 'danger' : 'default'">
@@ -25,6 +25,8 @@
           <van-cell-group inset>
             <van-field v-model="form.company" label="保险公司" placeholder="如：人保" :rules="[{ required: true, message: '必填' }]" />
             <van-field v-model="form.policy_no" label="保单号" placeholder="选填" />
+            <van-field v-model="form.plate_no" label="车辆牌号" placeholder="如：京A12345" />
+            <van-field v-model="form.vehicle_model" label="车辆型号" placeholder="如：沃尔沃XC60" />
             <van-field label="类型">
               <template #input>
                 <van-radio-group v-model="form.policy_type" direction="horizontal">
@@ -75,7 +77,8 @@ const form = ref(blank())
 
 function blank() {
   return { vehicle_id: Number(vehicleId), company: '', policy_no: '', policy_type: '商业险',
-    premium: 0, vehicle_tax: 0, service_phone: '', start_date: '', end_date: '', items_text: '', note: '' }
+    premium: 0, vehicle_tax: 0, service_phone: '', vehicle_model: '', plate_no: '',
+    start_date: '', end_date: '', items_text: '', note: '' }
 }
 
 function expiring(d) {
