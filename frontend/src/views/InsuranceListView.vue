@@ -6,7 +6,7 @@
       <van-cell-group inset v-for="p in records" :key="p.id" style="margin-top:10px;">
         <van-cell :title="p.company + ' · ' + p.policy_type"
                   :label="`${p.start_date || '?'} ~ ${p.end_date || '?'} · 保费¥${p.premium}${p.vehicle_tax ? ' · 车船税¥' + p.vehicle_tax : ''}${p.service_phone ? ' · 客服' + p.service_phone : ''}`"
-                  is-link @click="openEdit(p)">
+                  is-link @click="goDetail(p)">
           <template #value>
             <van-tag :type="expiring(p.end_date) ? 'danger' : 'default'">
               {{ expiring(p.end_date) ? '临期' : '有效' }}
@@ -17,9 +17,10 @@
       <van-button round block type="primary" icon="plus" style="margin-top:16px;" @click="openAdd">添加保单</van-button>
     </template>
 
+    <!-- 添加弹窗 -->
     <van-popup v-model:show="popup" position="bottom" round style="max-height:85vh;">
       <div style="padding:16px;">
-        <div style="font-size:16px;font-weight:600;margin-bottom:12px;">{{ editingId ? '编辑保单' : '添加保单' }}</div>
+        <div style="font-size:16px;font-weight:600;margin-bottom:12px;">添加保单</div>
         <van-form @submit="onSubmit">
           <van-cell-group inset>
             <van-field v-model="form.company" label="保险公司" placeholder="如：人保" :rules="[{ required: true, message: '必填' }]" />
@@ -43,7 +44,6 @@
           </van-cell-group>
           <div style="margin:16px;">
             <van-button round block type="primary" native-type="submit" :loading="saving">保 存</van-button>
-            <van-button round block plain type="danger" style="margin-top:8px;" v-if="editingId" @click="onDelete">删 除</van-button>
           </div>
         </van-form>
       </div>
@@ -57,18 +57,19 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { showSuccessToast, showFailToast } from 'vant'
 import api from '../api'
 
 const route = useRoute()
+const router = useRouter()
 const vehicleId = route.params.id
 const records = ref([])
 const loading = ref(true)
 const popup = ref(false)
-const editingId = ref(null)
 const saving = ref(false)
 const picking = ref('start')
+const datePopup = ref(false)
 
 const form = ref(blank())
 
@@ -90,21 +91,12 @@ async function load() {
 }
 onMounted(load)
 
-function openAdd() {
-  editingId.value = null
-  form.value = blank()
-  popup.value = true
+function goDetail(p) {
+  router.push(`/vehicle/${vehicleId}/insurance/${p.id}`)
 }
-function openEdit(p) {
-  editingId.value = p.id
-  form.value = {
-    vehicle_id: p.vehicle_id, company: p.company, policy_no: p.policy_no,
-    policy_type: p.policy_type, premium: Number(p.premium) || 0,
-    vehicle_tax: Number(p.vehicle_tax) || 0, service_phone: p.service_phone || '',
-    start_date: p.start_date || '', end_date: p.end_date || '',
-    items_text: (() => { try { return JSON.parse(p.items_json || '[]').join('、') } catch { return '' } })(),
-    note: p.note
-  }
+
+function openAdd() {
+  form.value = blank()
   popup.value = true
 }
 
@@ -112,8 +104,6 @@ function pick(which) {
   picking.value = which
   datePopup.value = true
 }
-
-const datePopup = ref(false)
 
 function onDateConfirm({ selectedValues }) {
   const v = selectedValues.join('-')
@@ -128,28 +118,15 @@ async function onSubmit() {
     const payload = {
       ...form.value,
       premium: form.value.premium || 0,
+      vehicle_tax: form.value.vehicle_tax || 0,
       start_date: form.value.start_date || null,
       end_date: form.value.end_date || null,
       items_json: JSON.stringify(form.value.items_text.split(/[、,，]/).map(s => s.trim()).filter(Boolean))
     }
-    if (editingId.value) {
-      await api.put(`/insurance/${editingId.value}`, payload)
-      showSuccessToast('已保存')
-    } else {
-      await api.post('/insurance', payload)
-      showSuccessToast('已添加')
-    }
+    await api.post('/insurance', payload)
+    showSuccessToast('已添加')
     popup.value = false
     load()
   } catch (e) { showFailToast(e.message) } finally { saving.value = false }
-}
-
-async function onDelete() {
-  try {
-    await api.delete(`/insurance/${editingId.value}`)
-    showSuccessToast('已删除')
-    popup.value = false
-    load()
-  } catch (e) { showFailToast(e.message) }
 }
 </script>

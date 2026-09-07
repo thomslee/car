@@ -20,6 +20,7 @@ const routes = [
       { path: 'vehicle/:id/refuels/:rid', component: () => import('./views/RefuelDetailView.vue'), meta: { title: '加油详情' } },
       { path: 'vehicle/:id/refuels/new', component: () => import('./views/RefuelFormView.vue'), meta: { title: '添加加油' } },
       { path: 'vehicle/:id/insurance', component: () => import('./views/InsuranceListView.vue'), meta: { title: '保险' } },
+      { path: 'vehicle/:id/insurance/:iid', component: () => import('./views/InsuranceDetailView.vue'), meta: { title: '保单详情' } },
       { path: 'vehicle/:id/inspections', component: () => import('./views/InspectionListView.vue'), meta: { title: '年检' } },
       { path: 'vehicle/:id/violations', component: () => import('./views/ViolationListView.vue'), meta: { title: '违章' } },
       { path: 'vehicle/:id/ai', component: () => import('./views/AiView.vue'), meta: { title: 'AI 分析' } },
