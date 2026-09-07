@@ -260,10 +260,12 @@ def over_maintenance(db: Session, vehicle: Vehicle) -> dict:
         .all()
     )
     for rec in records:
+        seen_in_record = set()
         for it in rec.items:
             if it.is_routine:
                 normalized = _normalize_item_name(it.item_name)
-                if normalized in manual_map:
+                if normalized in manual_map and normalized not in seen_in_record:
+                    seen_in_record.add(normalized)
                     occurrences.setdefault(normalized, []).append((rec.occurred_at, rec.mileage))
 
     findings = []
