@@ -52,22 +52,37 @@ def scan_for_user(db: Session, user: User, threshold_days: int):
     today = date.today()
     vehicles = db.query(Vehicle).filter(Vehicle.user_id == user.id, Vehicle.is_active.is_(True)).all()
     for v in vehicles:
-        # 保险到期
-        for p in (
+        # 保险到期（同一辆车只推一个提醒，取最早到期的保单；交强险和商业险一起办时合并提醒）
+        policies = (
             db.query(InsurancePolicy)
             .filter(InsurancePolicy.vehicle_id == v.id)
             .all()
-        ):
-            if p.end_date:
-                days_left = (p.end_date - today).days
-                if 0 <= days_left <= threshold_days:
-                    _upsert(
-                        db, user.id, v.id, "保险", p.id,
-                        f"保险到期：{p.company or '未填公司'} {p.policy_type}",
-                        p.end_date,
-                        f"{p.policy_type}将于 {p.end_date} 到期，剩余 {days_left} 天",
-                        threshold_days,
-                    )
+        )
+        active_policies = [p for p in policies if p.end_date]
+        if active_policies:
+            earliest = min(active_policies, key=lambda p: p.end_date)
+            days_left = (earliest.end_date - today).days
+            if 0 <= days_left <= threshold_days:
+                # 清理旧的保单级提醒（source_id为保单id），避免重复
+                db.query(Reminder).filter(
+                    Reminder.user_id == user.id,
+                    Reminder.vehicle_id == v.id,
+                    Reminder.remind_type == "保险",
+                    Reminder.source_id != v.id,
+                    Reminder.status == "待处理",
+                ).update({"status": "已处理"}, synchronize_session=False)
+
+                same_date = all(p.end_date == earliest.end_date for p in active_policies)
+                if same_date and len(active_policies) > 1:
+                    title = f"保险到期：{earliest.company or '未填公司'}（交强险+商业险）"
+                    msg = f"交强险和商业险均将于 {earliest.end_date} 到期，剩余 {days_left} 天，请及时续保"
+                else:
+                    title = f"保险到期：{earliest.company or '未填公司'} {earliest.policy_type}"
+                    msg = f"{earliest.policy_type}将于 {earliest.end_date} 到期，剩余 {days_left} 天"
+                _upsert(
+                    db, user.id, v.id, "保险", v.id,
+                    title, earliest.end_date, msg, threshold_days,
+                )
         # 年检到期
         for ins in (
             db.query(Inspection)
