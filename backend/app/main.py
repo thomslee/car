@@ -27,7 +27,8 @@ from .routers import (
     vehicles,
     violations,
 )
-from .seed_data import seed_if_empty
+from .seed_data import VOLVO_MANUAL, seed_if_empty
+from .models import MaintenanceManual
 from .services import remind_service
 
 
@@ -119,12 +120,30 @@ def _ensure_vehicle_schema():
                 print(f"[migrate] vehicles 已新增 {col}")
 
 
+def _ensure_maintenance_manual_seed():
+    """幂等迁移：补全保养手册种子数据（已部署系统缺少新增项目）。"""
+    db = SessionLocal()
+    try:
+        existing = {m.item_name for m in db.query(MaintenanceManual).all()}
+        added = 0
+        for item, km, months, note in VOLVO_MANUAL:
+            if item not in existing:
+                db.add(MaintenanceManual(brand="沃尔沃", item_name=item, interval_km=km, interval_months=months, note=note))
+                added += 1
+        if added:
+            db.commit()
+            print(f"[migrate] 保养手册已补全 {added} 项")
+    finally:
+        db.close()
+
+
 def _create_tables_and_seed():
     Base.metadata.create_all(bind=engine)
     _ensure_user_role_schema()
     _ensure_maintenance_schema()
     _ensure_refuel_schema()
     _ensure_vehicle_schema()
+    _ensure_maintenance_manual_seed()
     db = SessionLocal()
     try:
         seed_if_empty(db)

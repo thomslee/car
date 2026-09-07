@@ -22,6 +22,45 @@ EARLY_RATIO = 0.7
 DUE_DAYS = 30
 DUE_KM = 2000
 
+# 项目名称归一化：标准名 -> 匹配关键词列表（按优先级从上到下匹配）
+ITEM_ALIASES = [
+    ("机油及机油滤清器", ["机油滤清器", "油过滤器", "全合成机油", "原厂基础保养", "机油"]),
+    ("空调滤芯", ["空调滤", "花粉滤", "乘客室空气"]),
+    ("发动机空滤", ["空气滤", "空滤", "空气过滤器插片", "空气过滤器"]),
+    ("燃油滤清器", ["燃油滤", "汽滤", "燃料过滤"]),
+    ("火花塞", ["火花塞"]),
+    ("制动液", ["制动液", "刹车油"]),
+    ("刹车片", ["制动衬片", "刹车片"]),
+    ("刹车盘", ["刹车盘", "制动盘"]),
+    ("轮胎", ["轮胎"]),
+    ("变速箱油", ["变速箱油", "变速器油"]),
+    ("蓄电池", ["蓄电池", "电瓶"]),
+    ("雨刮片", ["雨刮", "雨刷"]),
+    ("防冻液", ["防冻液", "冷却液"]),
+    ("节气门清洗", ["节气门"]),
+    ("气门积碳清洗", ["气门积碳", "干冰清洗", "干冰"]),
+    ("喷油嘴清洗", ["喷油嘴", "燃油系统清洗"]),
+    ("三元催化清洗", ["三元催化"]),
+    ("空调清洗", ["空调清洗", "空调风道", "空调免费清洗"]),
+    ("发动机舱清洁", ["发动机舱", "机舱清洗"]),
+    ("全车安全检查", ["全车检查", "健康检查", "安全检测", "免费检测"]),
+    ("四轮定位", ["四轮定位", "动平衡"]),
+    ("空调压缩机油", ["压缩机油"]),
+    ("补胎液检查", ["补胎液"]),
+]
+
+
+def _normalize_item_name(name: str) -> str:
+    """将各种写法的项目名归一到标准名；未命中返回原始名称。"""
+    if not name:
+        return name or ""
+    n = name.strip()
+    for standard, keywords in ITEM_ALIASES:
+        for kw in keywords:
+            if kw in n:
+                return standard
+    return n
+
 
 def _add_months(d: date, months: int) -> date:
     y = d.year + (d.month - 1 + months) // 12
@@ -84,8 +123,9 @@ def maintenance_plan(db: Session, vehicle: Vehicle) -> dict:
     monthly = _monthly_km(db, vehicle)
     manual_map = _manual_map(db)
 
-    # 最近一次各定期项目的出现（date, mileage）
+    # 最近一次各定期项目的出现（归一化后），以及未命中标准项目的其他记录
     last_occurrence = {}
+    other_occurrence = {}  # 原始名 -> (date, mileage)
     records = (
         db.query(MaintenanceRecord)
         .filter(MaintenanceRecord.vehicle_id == vehicle.id)
@@ -94,31 +134,33 @@ def maintenance_plan(db: Session, vehicle: Vehicle) -> dict:
     )
     for rec in records:
         for it in rec.items:
-            if it.is_routine:
-                key = it.item_name
+            if not it.is_routine:
+                continue
+            normalized = _normalize_item_name(it.item_name)
+            if normalized in manual_map:
                 # 取该项目的最后一次（遍历顺序即时间正序）
-                last_occurrence[key] = (rec.occurred_at, rec.mileage)
+                last_occurrence[normalized] = (rec.occurred_at, rec.mileage)
+            else:
+                other_occurrence[it.item_name] = (rec.occurred_at, rec.mileage)
 
     plan_items = []
-    all_manual = set(manual_map.keys())
-    covered = set(last_occurrence.keys())
-    for name in sorted(all_manual | covered):
-        manual = manual_map.get(name)
+    for name, manual in sorted(manual_map.items(), key=lambda x: x[0]):
         base = last_occurrence.get(name)
-        if manual is None:
-            continue
         if base:
             last_date, last_km = base
             due_date = _add_months(last_date, manual.interval_months)
-            due_km = last_km + manual.interval_km
+            due_km = (last_km or 0) + manual.interval_km
             never_done = False
+            elapsed_days = (today - last_date).days
+            elapsed_km = (vehicle.current_mileage or 0) - (last_km or 0)
         else:
-            # 从未记录过：从购车/当前里程起算（可能已随保养做过但未单列，故不做强到期判断）
             never_done = True
             base_date = vehicle.purchase_date or today
-            base_km = vehicle.current_mileage
+            base_km = vehicle.current_mileage or 0
             due_date = _add_months(base_date, manual.interval_months)
             due_km = base_km + manual.interval_km
+            elapsed_days = None
+            elapsed_km = None
 
         days_left = (due_date - today).days
         km_left = due_km - (vehicle.current_mileage or 0)
@@ -139,30 +181,77 @@ def maintenance_plan(db: Session, vehicle: Vehicle) -> dict:
                 "due_mileage": due_km,
                 "days_left": days_left,
                 "km_left": km_left,
+                "elapsed_days": elapsed_days,
+                "elapsed_km": elapsed_km,
+                "interval_months": manual.interval_months,
+                "interval_km": manual.interval_km,
                 "status": status,
                 "manual_note": manual.note or "",
             }
         )
 
+    # 排序：已到期→临期→未到期→未记录，同级按 days_left 升序
+    status_order = {"已到期": 0, "临期": 1, "未到期": 2, "未记录": 3}
+    plan_items.sort(key=lambda x: (status_order.get(x["status"], 9), x["days_left"]))
+
     due_items = [p for p in plan_items if p["status"] in ("已到期", "临期")]
-    next_date = min((p["due_date"] for p in due_items), default=None)
-    next_km = min((p["due_mileage"] for p in due_items), default=None)
+
+    # 车辆级下次保养（与车辆主页一致：12月/10000km 或的关系）
+    interval_months = vehicle.maint_interval_months or 12
+    interval_km = vehicle.maint_interval_km or 10000
+    last_maint = (
+        db.query(MaintenanceRecord)
+        .filter(MaintenanceRecord.vehicle_id == vehicle.id)
+        .order_by(MaintenanceRecord.occurred_at.desc(), MaintenanceRecord.id.desc())
+        .first()
+    )
+    if last_maint:
+        v_base_date = last_maint.occurred_at if isinstance(last_maint.occurred_at, date) else last_maint.occurred_at.date()
+        v_base_km = last_maint.mileage or 0
+    else:
+        v_base_date = vehicle.purchase_date if isinstance(vehicle.purchase_date, date) else (vehicle.purchase_date.date() if vehicle.purchase_date else today)
+        v_base_km = vehicle.current_mileage or 0
+    v_next_date = _add_months(v_base_date, interval_months)
+    v_next_km = v_base_km + interval_km
+    v_days_left = (v_next_date - today).days
+    v_km_left = v_next_km - (vehicle.current_mileage or 0)
+    if v_days_left <= 0 or v_km_left <= 0:
+        v_status = "已到期"
+    elif v_days_left <= 30 or v_km_left <= 1000:
+        v_status = "临期"
+    else:
+        v_status = "未到期"
+
+    # 其他项目（归一化未命中的）
+    other_items = [
+        {"item_name": name, "last_date": str(d), "last_mileage": m}
+        for name, (d, m) in sorted(other_occurrence.items(), key=lambda x: x[1][0], reverse=True)
+    ]
+
     result = {
         "vehicle_id": vehicle.id,
         "generated_at": str(today),
         "monthly_km_estimate": monthly,
         "estimate_note": "月均里程由记录推算；数据不足时按 1000 公里/月估算",
-        "next_maintenance_date": next_date,
-        "next_maintenance_mileage": next_km,
-        "due_items": sorted(due_items, key=lambda x: (x["days_left"], x["km_left"])),
-        "plan_items": sorted(plan_items, key=lambda x: (x["days_left"], x["km_left"])),
+        "next_maintenance": {
+            "next_date": str(v_next_date),
+            "next_mileage": v_next_km,
+            "status": v_status,
+            "days_left": v_days_left,
+            "km_left": v_km_left,
+            "interval_months": interval_months,
+            "interval_km": interval_km,
+        },
+        "due_items": due_items,
+        "plan_items": plan_items,
+        "other_items": other_items,
     }
     return result
 
 
 def over_maintenance(db: Session, vehicle: Vehicle) -> dict:
     manual_map = _manual_map(db)
-    # 每个定期项目按时间排序的所有出现
+    # 每个定期项目（归一化后）按时间排序的所有出现
     occurrences = {}
     records = (
         db.query(MaintenanceRecord)
@@ -173,7 +262,9 @@ def over_maintenance(db: Session, vehicle: Vehicle) -> dict:
     for rec in records:
         for it in rec.items:
             if it.is_routine:
-                occurrences.setdefault(it.item_name, []).append((rec.occurred_at, rec.mileage))
+                normalized = _normalize_item_name(it.item_name)
+                if normalized in manual_map:
+                    occurrences.setdefault(normalized, []).append((rec.occurred_at, rec.mileage))
 
     findings = []
     for name, occ in occurrences.items():
@@ -307,8 +398,8 @@ def health_report(db: Session, vehicle: Vehicle) -> dict:
         "maintenance_count": maint_count,
         "repair_count": repair_count,
         "early_maintenance_count": over["early_count"],
-        "next_maintenance_date": plan["next_maintenance_date"],
-        "next_maintenance_mileage": plan["next_maintenance_mileage"],
+        "next_maintenance_date": plan["next_maintenance"]["next_date"],
+        "next_maintenance_mileage": plan["next_maintenance"]["next_mileage"],
     }
     return data
 
