@@ -37,14 +37,13 @@
         </van-cell>
       </div>
 
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px;margin-top:8px;">
-        <van-button v-if="vehicles.length" round block icon="plus" style="flex:1;margin-right:8px;"
+      <div style="margin-top:12px;display:flex;flex-direction:column;gap:10px;align-items:center;">
+        <div style="display:flex;align-items:center;gap:8px;background:#fff;border-radius:20px;padding:6px 14px;box-shadow:0 1px 2px rgba(0,0,0,0.04);">
+          <span style="font-size:13px;color:#646566;">{{ showArchived ? '隐藏已停用' : '显示已停用' }}</span>
+          <van-switch :model-value="showArchived" size="18px" @update:model-value="toggleArchived" />
+        </div>
+        <van-button v-if="vehicles.length" round icon="plus" type="primary" style="width:100%;"
           @click="router.push('/vehicle/new')">添加车辆</van-button>
-        <van-cell :value="showArchived ? '隐藏已停用' : '显示已停用'" center style="flex:0 0 auto;padding:0 12px;">
-          <template #right-icon>
-            <van-switch :model-value="showArchived" size="20px" @update:model-value="toggleArchived" />
-          </template>
-        </van-cell>
       </div>
     </template>
   </div>
