@@ -5,7 +5,7 @@
       <van-empty v-if="!records.length" description="还没有保单" />
       <van-cell-group inset v-for="p in records" :key="p.id" style="margin-top:10px;">
         <van-cell :title="p.company + ' · ' + p.policy_type"
-                  :label="`${p.start_date || '?'} ~ ${p.end_date || '?'} · ¥${p.premium}`"
+                  :label="`${p.start_date || '?'} ~ ${p.end_date || '?'} · 保费¥${p.premium}${p.vehicle_tax ? ' · 车船税¥' + p.vehicle_tax : ''}${p.service_phone ? ' · 客服' + p.service_phone : ''}`"
                   is-link @click="openEdit(p)">
           <template #value>
             <van-tag :type="expiring(p.end_date) ? 'danger' : 'default'">
@@ -33,6 +33,8 @@
               </template>
             </van-field>
             <van-field v-model.number="form.premium" type="number" label="保费" placeholder="元" />
+            <van-field v-model.number="form.vehicle_tax" type="number" label="车船税" placeholder="元（仅交强险）" />
+            <van-field v-model="form.service_phone" label="服务电话" placeholder="如：95518" />
             <van-field label="起保日期" :model-value="form.start_date" readonly is-link @click="pick('start')" />
             <van-field label="到期日期" :model-value="form.end_date" readonly is-link @click="pick('end')" />
             <van-field v-model="form.items_text" label="险种明细" type="textarea" rows="2"
@@ -72,7 +74,7 @@ const form = ref(blank())
 
 function blank() {
   return { vehicle_id: Number(vehicleId), company: '', policy_no: '', policy_type: '商业险',
-    premium: 0, start_date: '', end_date: '', items_text: '', note: '' }
+    premium: 0, vehicle_tax: 0, service_phone: '', start_date: '', end_date: '', items_text: '', note: '' }
 }
 
 function expiring(d) {
@@ -98,6 +100,7 @@ function openEdit(p) {
   form.value = {
     vehicle_id: p.vehicle_id, company: p.company, policy_no: p.policy_no,
     policy_type: p.policy_type, premium: Number(p.premium) || 0,
+    vehicle_tax: Number(p.vehicle_tax) || 0, service_phone: p.service_phone || '',
     start_date: p.start_date || '', end_date: p.end_date || '',
     items_text: (() => { try { return JSON.parse(p.items_json || '[]').join('、') } catch { return '' } })(),
     note: p.note

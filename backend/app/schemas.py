@@ -201,6 +201,8 @@ class InsuranceIn(BaseModel):
     policy_type: str = "商业险"
     items_json: str = "[]"
     premium: float = 0
+    vehicle_tax: float = 0
+    service_phone: str = ""
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     attachment: str = ""

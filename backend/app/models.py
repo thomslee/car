@@ -170,6 +170,8 @@ class InsurancePolicy(Base):
     policy_type = Column(String(20), default="商业险")  # 交强险/商业险
     items_json = Column(Text, default="[]")  # 险种明细 JSON
     premium = Column(Numeric(10, 2), default=0)
+    vehicle_tax = Column(Numeric(10, 2), default=0)  # 车船税（仅交强险）
+    service_phone = Column(String(30), default="")  # 保险公司服务电话
     start_date = Column(Date, nullable=True)
     end_date = Column(Date, nullable=True)
     attachment = Column(String(255), default="")

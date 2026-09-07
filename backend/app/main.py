@@ -137,6 +137,20 @@ def _ensure_maintenance_manual_seed():
         db.close()
 
 
+def _ensure_insurance_schema():
+    """幂等迁移：保险表加服务电话和车船税字段。"""
+    new_cols = {
+        "service_phone": "VARCHAR(30) NOT NULL DEFAULT ''",
+        "vehicle_tax": "DECIMAL(10,2) NOT NULL DEFAULT 0",
+    }
+    with engine.connect() as conn:
+        for col, ddl in new_cols.items():
+            if not conn.execute(text(f"SHOW COLUMNS FROM insurance_policies LIKE '{col}'")).fetchall():
+                conn.execute(text(f"ALTER TABLE insurance_policies ADD COLUMN {col} {ddl}"))
+                conn.commit()
+                print(f"[migrate] insurance_policies 已新增 {col}")
+
+
 def _create_tables_and_seed():
     Base.metadata.create_all(bind=engine)
     _ensure_user_role_schema()
@@ -144,6 +158,7 @@ def _create_tables_and_seed():
     _ensure_refuel_schema()
     _ensure_vehicle_schema()
     _ensure_maintenance_manual_seed()
+    _ensure_insurance_schema()
     db = SessionLocal()
     try:
         seed_if_empty(db)
