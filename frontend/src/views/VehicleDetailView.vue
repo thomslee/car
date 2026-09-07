@@ -24,14 +24,15 @@
 
       <!-- 关键指标 -->
       <div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap;">
-        <div style="flex:1 1 96px;background:#fff;border-radius:10px;padding:12px;text-align:center;">
+        <div style="flex:1 1 96px;background:#fff;border-radius:10px;padding:12px;text-align:center;" @click="router.push(`/vehicle/${vehicleId}/maintenance`)">
           <div style="font-size:11px;color:#969799;">下次保养</div>
-          <div style="font-size:15px;font-weight:600;margin-top:4px;color:#1989fa;">
-            {{ summary.maintenance_plan.next_date || '暂无' }}
+          <div style="font-size:15px;font-weight:600;margin-top:4px;" :style="{color: mtStatusColor}">
+            {{ summary.next_maintenance.next_date || '暂无' }}
           </div>
           <div style="font-size:11px;color:#969799;">
-            {{ summary.maintenance_plan.next_mileage ? summary.maintenance_plan.next_mileage + ' km' : '' }}
+            {{ summary.next_maintenance.next_mileage ? summary.next_maintenance.next_mileage + ' km' : '' }}
           </div>
+          <van-tag :type="mtStatusType" size="mini" style="margin-top:4px;">{{ summary.next_maintenance.status }}</van-tag>
         </div>
         <div style="flex:1 1 96px;background:#fff;border-radius:10px;padding:12px;text-align:center;">
           <div style="font-size:11px;color:#969799;">平均油耗</div>
@@ -84,7 +85,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { showSuccessToast, showFailToast, showConfirmDialog } from 'vant'
 import api from '../api'
@@ -94,6 +95,19 @@ const router = useRouter()
 const vehicleId = route.params.id
 const summary = ref(null)
 const loading = ref(true)
+
+const mtStatusColor = computed(() => {
+  const s = summary.value?.next_maintenance?.status
+  if (s === '已到期') return '#ee0a24'
+  if (s === '临期') return '#ff976a'
+  return '#07c160'
+})
+const mtStatusType = computed(() => {
+  const s = summary.value?.next_maintenance?.status
+  if (s === '已到期') return 'danger'
+  if (s === '临期') return 'warning'
+  return 'success'
+})
 
 onMounted(load)
 

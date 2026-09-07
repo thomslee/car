@@ -105,11 +105,26 @@ def _ensure_refuel_schema():
         conn.commit()
 
 
+def _ensure_vehicle_schema():
+    """幂等迁移：车辆表加保养周期字段。"""
+    new_cols = {
+        "maint_interval_months": "INT NOT NULL DEFAULT 12",
+        "maint_interval_km": "INT NOT NULL DEFAULT 10000",
+    }
+    with engine.connect() as conn:
+        for col, ddl in new_cols.items():
+            if not conn.execute(text(f"SHOW COLUMNS FROM vehicles LIKE '{col}'")).fetchall():
+                conn.execute(text(f"ALTER TABLE vehicles ADD COLUMN {col} {ddl}"))
+                conn.commit()
+                print(f"[migrate] vehicles 已新增 {col}")
+
+
 def _create_tables_and_seed():
     Base.metadata.create_all(bind=engine)
     _ensure_user_role_schema()
     _ensure_maintenance_schema()
     _ensure_refuel_schema()
+    _ensure_vehicle_schema()
     db = SessionLocal()
     try:
         seed_if_empty(db)

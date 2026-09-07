@@ -4,8 +4,17 @@ from datetime import date, timedelta
 
 from sqlalchemy.orm import Session
 
-from ..models import InsurancePolicy, Inspection, Reminder, User, Vehicle
+from ..models import InsurancePolicy, Inspection, MaintenanceRecord, Reminder, User, Vehicle
 from . import ai_service
+
+
+def _add_months(d: date, months: int) -> date:
+    m = d.month - 1 + months
+    y = d.year + m // 12
+    m = m % 12 + 1
+    days_in_month = [31, 29 if (y % 4 == 0 and (y % 100 != 0 or y % 400 == 0)) else 28,
+                      31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1]
+    return date(y, m, min(d.day, days_in_month))
 
 
 def _upsert(db: Session, user_id: int, vehicle_id: int, remind_type: str, source_id: int,
@@ -75,22 +84,49 @@ def scan_for_user(db: Session, user: User, threshold_days: int):
                         f"年检有效期至 {ins.expire_at}，剩余 {days_left} 天",
                         threshold_days,
                     )
-        # 保养到期（基于 AI 预测）
+        # 保养到期（基于车辆保养周期，或的关系：时间或里程任一先到）
         try:
-            plan = ai_service.maintenance_plan(db, v)
-            if plan.get("next_maintenance_date"):
-                next_d = date.fromisoformat(plan["next_maintenance_date"])
-                days_left = (next_d - today).days
-                if days_left <= threshold_days:
-                    item_names = "、".join(i["item_name"] for i in plan.get("due_items", [])[:5])
-                    _upsert(
-                        db, user.id, v.id, "保养", v.id,
-                        f"保养提醒：{v.name or v.brand}",
-                        next_d,
-                        f"预计下次保养 {next_d}（或 {plan.get('next_maintenance_mileage')} 公里），"
-                        f"建议项目：{item_names or '基础保养'}",
-                        threshold_days,
-                    )
+            interval_months = v.maint_interval_months or 12
+            interval_km = v.maint_interval_km or 10000
+            last_maint = (
+                db.query(MaintenanceRecord)
+                .filter(MaintenanceRecord.vehicle_id == v.id)
+                .order_by(MaintenanceRecord.occurred_at.desc(), MaintenanceRecord.id.desc())
+                .first()
+            )
+            if last_maint:
+                base_date = last_maint.occurred_at if isinstance(last_maint.occurred_at, date) else last_maint.occurred_at.date()
+                base_km = last_maint.mileage or 0
+            else:
+                base_date = v.purchase_date if isinstance(v.purchase_date, date) else (v.purchase_date.date() if v.purchase_date else today)
+                base_km = v.current_mileage or 0
+            next_d = _add_months(base_date, interval_months)
+            next_km = base_km + interval_km
+            days_left = (next_d - today).days
+            km_left = next_km - (v.current_mileage or 0)
+            # 或的关系：时间临期/到期 OR 里程临期/到期（1000km内）
+            if days_left <= threshold_days or km_left <= 1000:
+                if days_left <= 0 or km_left <= 0:
+                    status_text = "已到期"
+                else:
+                    status_text = "即将到期"
+                msg_parts = []
+                if days_left <= 0:
+                    msg_parts.append(f"时间已超期{-days_left}天")
+                elif days_left <= threshold_days:
+                    msg_parts.append(f"剩余{days_left}天")
+                if km_left <= 0:
+                    msg_parts.append(f"里程已超期{-km_left}km")
+                elif km_left <= 1000:
+                    msg_parts.append(f"剩余{km_left}km")
+                _upsert(
+                    db, user.id, v.id, "保养", v.id,
+                    f"保养提醒：{v.name or v.brand}",
+                    next_d,
+                    f"{status_text}（周期{interval_months}个月/{interval_km}公里，或）。"
+                    f"下次保养约{next_d}或{next_km}km，{'、'.join(msg_parts)}。",
+                    threshold_days,
+                )
         except Exception:
             pass
     db.commit()

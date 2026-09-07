@@ -14,6 +14,16 @@ from ..services import ai_service, fuel_service
 router = APIRouter(prefix="/api/vehicles", tags=["vehicles"])
 
 
+def _add_months(d: date, months: int) -> date:
+    """给 date 加 N 个月，处理月末溢出。"""
+    m = d.month - 1 + months
+    y = d.year + m // 12
+    m = m % 12 + 1
+    days_in_month = [31, 29 if (y % 4 == 0 and (y % 100 != 0 or y % 400 == 0)) else 28,
+                      31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1]
+    return date(y, m, min(d.day, days_in_month))
+
+
 @router.get("", response_model=list[VehicleOut])
 def list_vehicles(
     include_inactive: bool = Query(False),
@@ -97,9 +107,30 @@ def vehicle_summary(vehicle_id: int, user: User = Depends(get_current_user), db:
     ):
         if r.occurred_at and r.occurred_at.year == today.year:
             year_cost += float(r.total_cost or 0)
-    # AI 保养预测
+    # AI 保养预测（项目级，用于AI计划页）
     plan = ai_service.maintenance_plan(db, v)
     fuel = fuel_service.calc_fuel_stats(db, vehicle_id)
+
+    # 车辆级下次保养（基于车辆保养周期，或的关系）
+    interval_months = v.maint_interval_months or 12
+    interval_km = v.maint_interval_km or 10000
+    if last_maint:
+        base_date = last_maint.occurred_at if isinstance(last_maint.occurred_at, date) else last_maint.occurred_at.date()
+        base_km = last_maint.mileage or 0
+    else:
+        base_date = v.purchase_date if isinstance(v.purchase_date, date) else (v.purchase_date.date() if v.purchase_date else today)
+        base_km = v.current_mileage or 0
+    next_maint_date = _add_months(base_date, interval_months)
+    next_maint_km = base_km + interval_km
+    days_left = (next_maint_date - today).days
+    km_left = next_maint_km - (v.current_mileage or 0)
+    if days_left <= 0 or km_left <= 0:
+        mt_status = "已到期"
+    elif days_left <= 30 or km_left <= 1000:
+        mt_status = "临期"
+    else:
+        mt_status = "未到期"
+
     return {
         "vehicle": VehicleOut.model_validate(v).model_dump(),
         "current_mileage": v.current_mileage,
@@ -125,6 +156,17 @@ def vehicle_summary(vehicle_id: int, user: User = Depends(get_current_user), db:
             "next_mileage": plan["next_maintenance_mileage"],
             "due_items": [i["item_name"] for i in plan["due_items"][:5]],
             "monthly_km": plan["monthly_km_estimate"],
+        },
+        "next_maintenance": {
+            "next_date": str(next_maint_date),
+            "next_mileage": next_maint_km,
+            "status": mt_status,
+            "days_left": days_left,
+            "km_left": km_left,
+            "interval_months": interval_months,
+            "interval_km": interval_km,
+            "last_maintenance_date": str(last_maint.occurred_at) if last_maint else None,
+            "last_maintenance_mileage": last_maint.mileage if last_maint else None,
         },
         "fuel": {
             "overall_l100": fuel["overall_l100"],

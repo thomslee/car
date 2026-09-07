@@ -53,6 +53,8 @@ class Vehicle(Base):
     transmission = Column(String(20), default="")
     color = Column(String(20), default="")
     is_active = Column(Boolean, default=True)  # False=归档
+    maint_interval_months = Column(Integer, default=12)  # 保养时间周期（月）
+    maint_interval_km = Column(Integer, default=10000)  # 保养里程周期（公里）
     notes = Column(Text, default="")
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)

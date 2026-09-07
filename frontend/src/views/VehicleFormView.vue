@@ -36,6 +36,14 @@
       <van-field v-model="form.notes" label="备注" type="textarea" rows="2" autosize placeholder="选填" />
     </van-cell-group>
 
+    <van-cell-group inset title="保养周期" style="margin-top:12px;">
+      <van-field v-model.number="form.maint_interval_months" type="number" label="时间周期" placeholder="月" />
+      <van-field v-model.number="form.maint_interval_km" type="number" label="里程周期" placeholder="公里" />
+      <div style="padding:8px 16px;font-size:12px;color:#969799;">
+        时间或里程任一先到即需保养（或的关系），缺省 12 个月 / 10000 公里
+      </div>
+    </van-cell-group>
+
     <div style="margin:24px 16px;">
       <van-button round block type="primary" native-type="submit" :loading="loading">保 存</van-button>
     </div>
@@ -58,7 +66,8 @@ const form = ref({
   name: '', brand: '沃尔沃', series: '', model_name: '', model_year: '',
   plate_no: '', vin: '', engine_no: '', purchase_date: '',
   initial_mileage: 0, current_mileage: 0, fuel_type: '汽油',
-  displacement: '', transmission: '', color: '', notes: ''
+  displacement: '', transmission: '', color: '', notes: '',
+  maint_interval_months: 12, maint_interval_km: 10000
 })
 
 onMounted(async () => {

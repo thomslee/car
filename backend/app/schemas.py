@@ -66,6 +66,8 @@ class VehicleIn(BaseModel):
     displacement: str = ""
     transmission: str = ""
     color: str = ""
+    maint_interval_months: int = 12
+    maint_interval_km: int = 10000
     notes: str = ""
 
 
