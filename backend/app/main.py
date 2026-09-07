@@ -81,10 +81,35 @@ def _ensure_maintenance_schema():
                 print(f"[migrate] maintenance_items 已新增 {col}")
 
 
+def _ensure_refuel_schema():
+    """幂等迁移：加油记录加实付金额/油标，refueled_at 改 DATETIME，旧数据回填。"""
+    new_cols = {
+        "paid_amount": "DECIMAL(10,2) NOT NULL DEFAULT 0",
+        "fuel_grade": "VARCHAR(10) NOT NULL DEFAULT '95'",
+    }
+    with engine.connect() as conn:
+        for col, ddl in new_cols.items():
+            if not conn.execute(text(f"SHOW COLUMNS FROM refuel_records LIKE '{col}'")).fetchall():
+                conn.execute(text(f"ALTER TABLE refuel_records ADD COLUMN {col} {ddl}"))
+                conn.commit()
+                print(f"[migrate] refuel_records 已新增 {col}")
+        # refueled_at DATE -> DATETIME（幂等，已是 DATETIME 时无影响）
+        row = conn.execute(text("SHOW COLUMNS FROM refuel_records LIKE 'refueled_at'")).fetchone()
+        if row and row[1].upper().startswith("DATE") and not row[1].upper().startswith("DATETIME"):
+            conn.execute(text("ALTER TABLE refuel_records MODIFY COLUMN refueled_at DATETIME NOT NULL"))
+            conn.commit()
+            print("[migrate] refuel_records.refueled_at 已改为 DATETIME")
+        # 旧数据回填：实付=应付（无优惠），油标=95
+        conn.execute(text("UPDATE refuel_records SET paid_amount = total_cost WHERE paid_amount = 0 AND total_cost > 0"))
+        conn.execute(text("UPDATE refuel_records SET fuel_grade = '95' WHERE fuel_grade IS NULL OR fuel_grade = ''"))
+        conn.commit()
+
+
 def _create_tables_and_seed():
     Base.metadata.create_all(bind=engine)
     _ensure_user_role_schema()
     _ensure_maintenance_schema()
+    _ensure_refuel_schema()
     db = SessionLocal()
     try:
         seed_if_empty(db)

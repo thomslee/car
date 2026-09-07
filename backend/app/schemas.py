@@ -170,11 +170,13 @@ class MaintenanceOut(BaseModel):
 # ---------- 加油 ----------
 class RefuelIn(BaseModel):
     vehicle_id: int
-    refueled_at: date
-    mileage: int = 0
+    refueled_at: datetime
+    mileage: Optional[int] = None
     fuel_amount_l: float = 0
     unit_price: float = 0
-    total_cost: float = 0
+    total_cost: float = 0  # 应付金额
+    paid_amount: float = 0  # 实付金额（优惠后）
+    fuel_grade: str = "95"  # 油标：92/95/98
     station: str = ""
     fuel_type: str = "汽油"
     is_full: bool = True

@@ -17,6 +17,7 @@ const routes = [
       { path: 'vehicle/:id/maintenance/:mid/edit', component: () => import('./views/MaintenanceFormView.vue'), meta: { title: '编辑记录' } },
       { path: 'vehicle/:id/ocr', component: () => import('./views/OcrView.vue'), meta: { title: '扫描录入' } },
       { path: 'vehicle/:id/refuels', component: () => import('./views/RefuelListView.vue'), meta: { title: '加油记录' } },
+      { path: 'vehicle/:id/refuels/:rid', component: () => import('./views/RefuelDetailView.vue'), meta: { title: '加油详情' } },
       { path: 'vehicle/:id/refuels/new', component: () => import('./views/RefuelFormView.vue'), meta: { title: '添加加油' } },
       { path: 'vehicle/:id/insurance', component: () => import('./views/InsuranceListView.vue'), meta: { title: '保险' } },
       { path: 'vehicle/:id/inspections', component: () => import('./views/InspectionListView.vue'), meta: { title: '年检' } },

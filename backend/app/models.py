@@ -144,11 +144,13 @@ class RefuelRecord(Base):
 
     id = Column(Integer, primary_key=True)
     vehicle_id = Column(Integer, ForeignKey("vehicles.id"), nullable=False, index=True)
-    refueled_at = Column(Date, nullable=False)
-    mileage = Column(Integer, default=0)
+    refueled_at = Column(DateTime, nullable=False)
+    mileage = Column(Integer, nullable=True)
     fuel_amount_l = Column(Numeric(8, 2), default=0)
     unit_price = Column(Numeric(6, 2), default=0)
-    total_cost = Column(Numeric(10, 2), default=0)
+    total_cost = Column(Numeric(10, 2), default=0)  # 应付金额
+    paid_amount = Column(Numeric(10, 2), default=0)  # 实付金额（优惠后）
+    fuel_grade = Column(String(10), default="95")  # 油标：92/95/98
     station = Column(String(100), default="")
     fuel_type = Column(String(20), default="汽油")
     is_full = Column(Boolean, default=True)  # 是否加满
