@@ -60,6 +60,7 @@ class VehicleIn(BaseModel):
     plate_no: str = ""
     engine_no: str = ""
     purchase_date: Optional[date] = None
+    registration_date: Optional[date] = None
     initial_mileage: int = 0
     current_mileage: int = 0
     fuel_type: str = "汽油"

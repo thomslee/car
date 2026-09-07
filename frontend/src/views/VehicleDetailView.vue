@@ -11,6 +11,7 @@
             <div style="font-size:12px;color:#969799;margin-top:2px;">
               {{ summary.vehicle.brand }} {{ summary.vehicle.series }} {{ summary.vehicle.model_name }}
               · {{ summary.vehicle.plate_no || '未填车牌' }}
+              <span v-if="summary.vehicle.registration_date"> · 注册登记 {{ summary.vehicle.registration_date }}</span>
             </div>
           </template>
           <template #value>
@@ -45,6 +46,14 @@
           <div style="font-size:11px;color:#969799;">本年花费</div>
           <div style="font-size:15px;font-weight:600;margin-top:4px;">{{ summary.year_cost }}</div>
           <div style="font-size:11px;color:#969799;">元</div>
+        </div>
+        <div v-if="summary.next_inspection" style="flex:1 1 96px;background:#fff;border-radius:10px;padding:12px;text-align:center;" @click="router.push(`/vehicle/${vehicleId}/inspections`)">
+          <div style="font-size:11px;color:#969799;">下次年检</div>
+          <div style="font-size:15px;font-weight:600;margin-top:4px;" :style="{color: inspectionStatusColor}">
+            {{ summary.next_inspection.next_date || '暂无' }}
+          </div>
+          <div style="font-size:11px;color:#969799;">{{ summary.next_inspection.inspection_type }}</div>
+          <van-tag :type="inspectionStatusType" size="mini" style="margin-top:4px;">{{ inspectionStatusText }}</van-tag>
         </div>
       </div>
 
@@ -107,6 +116,28 @@ const mtStatusType = computed(() => {
   if (s === '已到期') return 'danger'
   if (s === '临期') return 'warning'
   return 'success'
+})
+
+const inspectionStatusColor = computed(() => {
+  const d = summary.value?.next_inspection?.days_left
+  if (d == null) return '#969799'
+  if (d <= 0) return '#ee0a24'
+  if (d <= 30) return '#ff976a'
+  return '#07c160'
+})
+const inspectionStatusType = computed(() => {
+  const d = summary.value?.next_inspection?.days_left
+  if (d == null) return 'default'
+  if (d <= 0) return 'danger'
+  if (d <= 30) return 'warning'
+  return 'success'
+})
+const inspectionStatusText = computed(() => {
+  const d = summary.value?.next_inspection?.days_left
+  if (d == null) return '未设置'
+  if (d <= 0) return `已超期${-d}天`
+  if (d <= 30) return `剩余${d}天`
+  return `剩余${d}天`
 })
 
 onMounted(load)

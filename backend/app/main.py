@@ -111,6 +111,7 @@ def _ensure_vehicle_schema():
     new_cols = {
         "maint_interval_months": "INT NOT NULL DEFAULT 12",
         "maint_interval_km": "INT NOT NULL DEFAULT 10000",
+        "registration_date": "DATE NULL",
     }
     with engine.connect() as conn:
         for col, ddl in new_cols.items():

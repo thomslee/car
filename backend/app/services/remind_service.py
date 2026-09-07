@@ -17,6 +17,27 @@ def _add_months(d: date, months: int) -> date:
     return date(y, m, min(d.day, days_in_month))
 
 
+def _calc_next_inspection(reg_date: date, today: date) -> dict | None:
+    """根据注册登记日期推算下一次年检（非营运小微型客车，2022年10月政策）。
+    第2、4、8年免检申领标志，第6、10年上线检测，10年以上每年上线检测。"""
+    if not reg_date:
+        return None
+    milestones = [2, 4, 6, 8, 10]
+    online_years = {6, 10}
+    for years in milestones:
+        due_date = _add_months(reg_date, years * 12)
+        if due_date > today:
+            inspection_type = "上线检测" if years in online_years else "免检申领标志"
+            return {"next_date": due_date, "inspection_type": inspection_type, "years": years}
+    # 超过10年，每年一次
+    next_years = 11
+    due_date = _add_months(reg_date, next_years * 12)
+    while due_date <= today:
+        next_years += 1
+        due_date = _add_months(reg_date, next_years * 12)
+    return {"next_date": due_date, "inspection_type": "上线检测", "years": next_years}
+
+
 def _upsert(db: Session, user_id: int, vehicle_id: int, remind_type: str, source_id: int,
             title: str, target_date, message: str, threshold_days: int):
     exists = (
@@ -83,20 +104,34 @@ def scan_for_user(db: Session, user: User, threshold_days: int):
                     db, user.id, v.id, "保险", v.id,
                     title, earliest.end_date, msg, threshold_days,
                 )
-        # 年检到期
-        for ins in (
+        # 年检到期（优先用手动录入的最新有效记录，否则根据注册登记日期按现行政策推算）
+        latest_ins = (
             db.query(Inspection)
-            .filter(Inspection.vehicle_id == v.id)
-            .all()
-        ):
-            if ins.expire_at:
-                days_left = (ins.expire_at - today).days
+            .filter(Inspection.vehicle_id == v.id, Inspection.expire_at.isnot(None))
+            .order_by(Inspection.expire_at.desc())
+            .first()
+        )
+        if latest_ins and latest_ins.expire_at and latest_ins.expire_at > today:
+            days_left = (latest_ins.expire_at - today).days
+            if 0 <= days_left <= threshold_days:
+                _upsert(
+                    db, user.id, v.id, "年检", v.id,
+                    "年检到期",
+                    latest_ins.expire_at,
+                    f"年检有效期至 {latest_ins.expire_at}，剩余 {days_left} 天",
+                    threshold_days,
+                )
+        elif v.registration_date:
+            next_ins = _calc_next_inspection(v.registration_date, today)
+            if next_ins:
+                days_left = (next_ins["next_date"] - today).days
                 if 0 <= days_left <= threshold_days:
                     _upsert(
-                        db, user.id, v.id, "年检", ins.id,
-                        "年检到期",
-                        ins.expire_at,
-                        f"年检有效期至 {ins.expire_at}，剩余 {days_left} 天",
+                        db, user.id, v.id, "年检", v.id,
+                        f"年检到期：{next_ins['inspection_type']}",
+                        next_ins["next_date"],
+                        f"车辆注册登记于 {v.registration_date}，按现行政策第{next_ins['years']}年需{next_ins['inspection_type']}，"
+                        f"到期日 {next_ins['next_date']}，剩余 {days_left} 天，请及时办理",
                         threshold_days,
                     )
         # 保养到期（基于车辆保养周期，或的关系：时间或里程任一先到）

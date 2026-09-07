@@ -46,6 +46,7 @@ class Vehicle(Base):
     plate_no = Column(String(20), default="")
     engine_no = Column(String(50), default="")
     purchase_date = Column(Date, nullable=True)
+    registration_date = Column(Date, nullable=True)  # 注册登记日期（用于推算年检）
     initial_mileage = Column(Integer, default=0)
     current_mileage = Column(Integer, default=0)
     fuel_type = Column(String(20), default="汽油")

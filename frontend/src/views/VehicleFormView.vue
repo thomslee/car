@@ -10,7 +10,9 @@
       <van-field v-model="form.vin" label="车架号 VIN" placeholder="17位车架号" />
       <van-field v-model="form.engine_no" label="发动机号" placeholder="选填" />
       <van-field label="购车日期" :model-value="form.purchase_date" placeholder="选择日期"
-                 readonly is-link @click="datePickerVisible = true" />
+                 readonly is-link @click="datePickerVisible = true; datePickerField = 'purchase_date'" />
+      <van-field label="注册登记日期" :model-value="form.registration_date" placeholder="选择日期（用于推算年检）"
+                 readonly is-link @click="datePickerVisible = true; datePickerField = 'registration_date'" />
     </van-cell-group>
     <van-popup v-model:show="datePickerVisible" position="bottom" round>
       <van-date-picker :min-date="new Date(1990, 0, 1)" :max-date="new Date(2035, 11, 31)"
@@ -61,10 +63,11 @@ const router = useRouter()
 const vehicleId = route.params.id
 const loading = ref(false)
 const datePickerVisible = ref(false)
+const datePickerField = ref('purchase_date')
 
 const form = ref({
   name: '', brand: '沃尔沃', series: '', model_name: '', model_year: '',
-  plate_no: '', vin: '', engine_no: '', purchase_date: '',
+  plate_no: '', vin: '', engine_no: '', purchase_date: '', registration_date: '',
   initial_mileage: 0, current_mileage: 0, fuel_type: '汽油',
   displacement: '', transmission: '', color: '', notes: '',
   maint_interval_months: 12, maint_interval_km: 10000
@@ -74,7 +77,7 @@ onMounted(async () => {
   if (vehicleId) {
     try {
       const v = await api.get(`/vehicles/${vehicleId}`)
-      form.value = { ...form.value, ...v, purchase_date: v.purchase_date || '' }
+      form.value = { ...form.value, ...v, purchase_date: v.purchase_date || '', registration_date: v.registration_date || '' }
     } catch (e) {
       showFailToast(e.message)
     }
@@ -82,14 +85,14 @@ onMounted(async () => {
 })
 
 function onDateConfirm({ selectedValues }) {
-  form.value.purchase_date = selectedValues.join('-')
+  form.value[datePickerField.value] = selectedValues.join('-')
   datePickerVisible.value = false
 }
 
 async function onSubmit() {
   loading.value = true
   try {
-    const payload = { ...form.value, purchase_date: form.value.purchase_date || null }
+    const payload = { ...form.value, purchase_date: form.value.purchase_date || null, registration_date: form.value.registration_date || null }
     if (vehicleId) {
       await api.put(`/vehicles/${vehicleId}`, payload)
       showSuccessToast('已保存')

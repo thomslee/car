@@ -9,7 +9,7 @@ from ..database import get_db
 from ..deps import get_current_user, get_vehicle_or_404
 from ..models import MaintenanceRecord, MileageRecord, Reminder, User, Vehicle
 from ..schemas import MileageIn, VehicleIn, VehicleOut
-from ..services import ai_service, fuel_service
+from ..services import ai_service, fuel_service, remind_service
 
 router = APIRouter(prefix="/api/vehicles", tags=["vehicles"])
 
@@ -22,6 +22,37 @@ def _add_months(d: date, months: int) -> date:
     days_in_month = [31, 29 if (y % 4 == 0 and (y % 100 != 0 or y % 400 == 0)) else 28,
                       31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1]
     return date(y, m, min(d.day, days_in_month))
+
+
+def _calc_next_inspection_info(db: Session, v: Vehicle, today: date) -> dict | None:
+    """计算下次年检：优先用手动录入的最新有效记录，否则根据注册登记日期按现行政策推算。"""
+    from ..models import Inspection
+    latest = (
+        db.query(Inspection)
+        .filter(Inspection.vehicle_id == v.id, Inspection.expire_at.isnot(None))
+        .order_by(Inspection.expire_at.desc())
+        .first()
+    )
+    if latest and latest.expire_at and latest.expire_at > today:
+        days_left = (latest.expire_at - today).days
+        return {
+            "next_date": str(latest.expire_at),
+            "inspection_type": "年检",
+            "days_left": days_left,
+            "source": "手动录入",
+        }
+    if v.registration_date:
+        result = remind_service._calc_next_inspection(v.registration_date, today)
+        if result:
+            days_left = (result["next_date"] - today).days
+            return {
+                "next_date": str(result["next_date"]),
+                "inspection_type": result["inspection_type"],
+                "days_left": days_left,
+                "source": "政策推算",
+                "registration_date": str(v.registration_date),
+            }
+    return None
 
 
 @router.get("", response_model=list[VehicleOut])
@@ -168,6 +199,7 @@ def vehicle_summary(vehicle_id: int, user: User = Depends(get_current_user), db:
             "last_maintenance_date": str(last_maint.occurred_at) if last_maint else None,
             "last_maintenance_mileage": last_maint.mileage if last_maint else None,
         },
+        "next_inspection": _calc_next_inspection_info(db, v, today),
         "fuel": {
             "overall_l100": fuel["overall_l100"],
             "total_cost": fuel["total_cost"],
