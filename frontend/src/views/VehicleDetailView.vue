@@ -11,7 +11,6 @@
             <div style="font-size:12px;color:#969799;margin-top:2px;">
               {{ summary.vehicle.brand }} {{ summary.vehicle.series }} {{ summary.vehicle.model_name }}
               · {{ summary.vehicle.plate_no || '未填车牌' }}
-              <span v-if="summary.vehicle.registration_date"> · 注册登记 {{ summary.vehicle.registration_date }}</span>
             </div>
           </template>
           <template #value>
@@ -25,7 +24,7 @@
 
       <!-- 关键指标 -->
       <div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap;">
-        <div style="flex:1 1 96px;background:#fff;border-radius:10px;padding:12px;text-align:center;" @click="router.push(`/vehicle/${vehicleId}/maintenance`)">
+        <div style="flex:1 1 140px;background:#fff;border-radius:10px;padding:12px;text-align:center;" @click="router.push(`/vehicle/${vehicleId}/maintenance`)">
           <div style="font-size:11px;color:#969799;">下次保养</div>
           <div style="font-size:15px;font-weight:600;margin-top:4px;" :style="{color: mtStatusColor}">
             {{ summary.next_maintenance.next_date || '暂无' }}
@@ -35,19 +34,7 @@
           </div>
           <van-tag :type="mtStatusType" size="mini" style="margin-top:4px;">{{ summary.next_maintenance.status }}</van-tag>
         </div>
-        <div style="flex:1 1 96px;background:#fff;border-radius:10px;padding:12px;text-align:center;">
-          <div style="font-size:11px;color:#969799;">平均油耗</div>
-          <div style="font-size:15px;font-weight:600;margin-top:4px;">
-            {{ summary.fuel.overall_l100 ?? '--' }}
-          </div>
-          <div style="font-size:11px;color:#969799;">L/100km</div>
-        </div>
-        <div style="flex:1 1 96px;background:#fff;border-radius:10px;padding:12px;text-align:center;">
-          <div style="font-size:11px;color:#969799;">本年花费</div>
-          <div style="font-size:15px;font-weight:600;margin-top:4px;">{{ summary.year_cost }}</div>
-          <div style="font-size:11px;color:#969799;">元</div>
-        </div>
-        <div v-if="summary.next_inspection" style="flex:1 1 96px;background:#fff;border-radius:10px;padding:12px;text-align:center;" @click="router.push(`/vehicle/${vehicleId}/inspections`)">
+        <div v-if="summary.next_inspection" style="flex:1 1 140px;background:#fff;border-radius:10px;padding:12px;text-align:center;" @click="router.push(`/vehicle/${vehicleId}/inspections`)">
           <div style="font-size:11px;color:#969799;">下次年检</div>
           <div style="font-size:15px;font-weight:600;margin-top:4px;" :style="{color: inspectionStatusColor}">
             {{ summary.next_inspection.next_date || '暂无' }}
