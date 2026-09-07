@@ -87,11 +87,37 @@
 
     <!-- 价格估算 -->
     <div v-if="tab === 'price'">
-      <van-cell-group inset style="margin-top:12px;">
-        <van-field v-model="priceItems" label="项目" type="textarea" rows="3"
-                   placeholder="输入项目名，逗号分隔&#10;如：机油及机油滤清器,火花塞,制动液" />
+      <div v-if="!plan" style="background:#fff8e6;border-radius:10px;padding:12px;font-size:13px;margin:12px 0;">
+        请先在「保养预测」中生成预测，系统将自动导入已到期/临期项目进行价格估算。
+      </div>
+      <template v-else>
+        <van-button round block plain type="primary" style="margin:12px 0;" @click="importFromPlan" :disabled="!plan.due_items?.length">
+          从保养预测导入临期项目（{{ plan.due_items?.length || 0 }}项）
+        </van-button>
+      </template>
+
+      <van-cell-group inset v-if="priceItemList.length">
+        <van-cell title="待估算项目">
+          <template #value>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;">
+              <van-tag v-for="(item, idx) in priceItemList" :key="idx" closeable type="primary"
+                       @close="removePriceItem(idx)">{{ item }}</van-tag>
+            </div>
+          </template>
+        </van-cell>
       </van-cell-group>
-      <van-button round block type="primary" style="margin:12px 0;" :loading="priceLoading" @click="runPrice">估算价格</van-button>
+
+      <van-cell-group inset style="margin-top:12px;">
+        <van-field v-model="newPriceItem" label="添加项目" placeholder="输入项目名后点添加"
+                   @keyup.enter="addPriceItem">
+          <template #button>
+            <van-button size="small" type="primary" @click="addPriceItem">添加</van-button>
+          </template>
+        </van-field>
+      </van-cell-group>
+
+      <van-button round block type="primary" style="margin:12px 0;" :loading="priceLoading"
+                :disabled="!priceItemList.length" @click="runPrice">估算价格（{{ priceItemList.length }}项）</van-button>
       <van-cell-group inset v-if="price">
         <van-cell v-for="i in price.items" :key="i.item_name" :title="i.item_name"
                   :label="`来源：${i.source}${i.sample_count ? '（' + i.sample_count + '次记录）' : ''}`">
@@ -149,7 +175,8 @@ const plan = ref(null)
 const over = ref(null)
 const price = ref(null)
 const health = ref(null)
-const priceItems = ref('机油及机油滤清器,火花塞,制动液')
+const priceItemList = ref([])
+const newPriceItem = ref('')
 const planLoading = ref(false)
 const overLoading = ref(false)
 const priceLoading = ref(false)
@@ -203,11 +230,25 @@ async function runOver() {
   try { over.value = await api.post('/ai/over-maintenance', { vehicle_id: vehicleId }) }
   catch (e) { showFailToast(e.message) } finally { overLoading.value = false }
 }
+function importFromPlan() {
+  if (!plan.value?.due_items) return
+  const items = plan.value.due_items.map(i => i.item_name)
+  priceItemList.value = [...new Set([...priceItemList.value, ...items])]
+}
+function addPriceItem() {
+  const v = newPriceItem.value.trim()
+  if (v && !priceItemList.value.includes(v)) {
+    priceItemList.value.push(v)
+  }
+  newPriceItem.value = ''
+}
+function removePriceItem(idx) {
+  priceItemList.value.splice(idx, 1)
+}
 async function runPrice() {
   priceLoading.value = true
   try {
-    const items = priceItems.value.split(/[、,，]/).map(s => s.trim()).filter(Boolean)
-    price.value = await api.post('/ai/price-estimate', { vehicle_id: vehicleId, items })
+    price.value = await api.post('/ai/price-estimate', { vehicle_id: vehicleId, items: priceItemList.value })
   } catch (e) { showFailToast(e.message) } finally { priceLoading.value = false }
 }
 async function runHealth() {
