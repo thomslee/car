@@ -149,6 +149,9 @@ def _ensure_insurance_schema():
                 conn.execute(text(f"ALTER TABLE insurance_policies ADD COLUMN {col} {ddl}"))
                 conn.commit()
                 print(f"[migrate] insurance_policies 已新增 {col}")
+        # 修复旧数据 attachment NULL 导致 schema 校验失败
+        conn.execute(text("UPDATE insurance_policies SET attachment = '' WHERE attachment IS NULL"))
+        conn.commit()
 
 
 def _create_tables_and_seed():

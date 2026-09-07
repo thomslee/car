@@ -205,7 +205,7 @@ class InsuranceIn(BaseModel):
     service_phone: str = ""
     start_date: Optional[date] = None
     end_date: Optional[date] = None
-    attachment: str = ""
+    attachment: Optional[str] = ""
     note: str = ""
 
 
