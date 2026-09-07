@@ -73,7 +73,8 @@
       </van-cell-group>
 
       <div style="margin-top:16px;display:flex;gap:8px;">
-        <van-button size="small" plain type="danger" style="flex:1;" @click="onArchive">归档车辆</van-button>
+        <van-button v-if="summary.vehicle.is_active !== false" size="small" plain type="danger" style="flex:1;" @click="onArchive">停用车辆</van-button>
+        <van-button v-else size="small" plain type="success" style="flex:1;" @click="onRestore">恢复车辆</van-button>
         <van-button size="small" plain type="primary" style="flex:1;" @click="onExport">导出数据</van-button>
       </div>
     </template>
@@ -141,10 +142,21 @@ async function load() {
 
 async function onArchive() {
   try {
-    await showConfirmDialog({ title: '归档车辆', message: '归档后车辆将从主页隐藏，历史数据保留。确定归档？' })
+    await showConfirmDialog({ title: '停用车辆', message: '停用后车辆将从主页隐藏，历史数据保留。可在首页"显示已停用"中恢复。确定停用？' })
     await api.delete(`/vehicles/${vehicleId}`)
-    showSuccessToast('已归档')
+    showSuccessToast('已停用')
     router.push('/')
+  } catch (e) {
+    if (e !== 'cancel') showFailToast(e.message || '已取消')
+  }
+}
+
+async function onRestore() {
+  try {
+    await showConfirmDialog({ title: '恢复车辆', message: '恢复后车辆将重新显示在主页。确定恢复？' })
+    await api.post(`/vehicles/${vehicleId}/restore`)
+    showSuccessToast('已恢复')
+    load()
   } catch (e) {
     if (e !== 'cancel') showFailToast(e.message || '已取消')
   }

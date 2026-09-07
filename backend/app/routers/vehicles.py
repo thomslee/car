@@ -111,6 +111,15 @@ def archive_vehicle(vehicle_id: int, user: User = Depends(get_current_user), db:
     return {"ok": True}
 
 
+@router.post("/{vehicle_id}/restore")
+def restore_vehicle(vehicle_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """恢复已归档车辆"""
+    v = get_vehicle_or_404(db, vehicle_id, user)
+    v.is_active = True
+    db.commit()
+    return {"ok": True}
+
+
 @router.get("/{vehicle_id}/summary")
 def vehicle_summary(vehicle_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     v = get_vehicle_or_404(db, vehicle_id, user)
