@@ -77,7 +77,7 @@
 
       <!-- 功能入口 -->
       <van-cell-group inset>
-        <van-cell icon="edit" title="车辆档案" is-link @click="router.push(`/vehicle/${vehicleId}/edit`)" />
+        <van-cell icon="edit" title="车辆档案" is-link @click="router.push(`/vehicle/${vehicleId}/archive`)" />
         <van-cell icon="shield-o" title="保险" is-link @click="router.push(`/vehicle/${vehicleId}/insurance`)" />
         <van-cell icon="certificate" title="年检" is-link @click="router.push(`/vehicle/${vehicleId}/inspections`)" />
         <van-cell icon="warning-o" title="违章记录" is-link @click="router.push(`/vehicle/${vehicleId}/violations`)" />

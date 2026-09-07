@@ -11,6 +11,7 @@ const routes = [
       { path: 'vehicle/new', component: () => import('./views/VehicleFormView.vue'), meta: { title: '添加车辆' } },
       { path: 'vehicle/:id/edit', component: () => import('./views/VehicleFormView.vue'), meta: { title: '编辑车辆' } },
       { path: 'vehicle/:id', component: () => import('./views/VehicleDetailView.vue'), meta: { title: '车辆主页' } },
+      { path: 'vehicle/:id/archive', component: () => import('./views/VehicleArchiveDetailView.vue'), meta: { title: '车辆档案' } },
       { path: 'vehicle/:id/maintenance', component: () => import('./views/MaintenanceListView.vue'), meta: { title: '保养维修' } },
       { path: 'vehicle/:id/maintenance/:mid', component: () => import('./views/MaintenanceDetailView.vue'), meta: { title: '保养详情' } },
       { path: 'vehicle/:id/maintenance/new', component: () => import('./views/MaintenanceFormView.vue'), meta: { title: '录入保养' } },
