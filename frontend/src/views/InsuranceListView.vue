@@ -14,7 +14,10 @@
           </template>
         </van-cell>
       </van-cell-group>
-      <van-button round block type="primary" icon="plus" style="margin-top:16px;" @click="openAdd">添加保单</van-button>
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <van-button round block plain type="primary" icon="scan" @click="router.push(`/vehicle/${vehicleId}/ocr?type=insurance`)">扫描录入</van-button>
+        <van-button round block type="primary" icon="plus" @click="openAdd">添加保单</van-button>
+      </div>
     </template>
 
     <!-- 添加弹窗 -->

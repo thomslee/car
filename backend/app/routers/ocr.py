@@ -33,6 +33,7 @@ def _vision_provider(db: Session):
 def ocr_upload(
     file: UploadFile = File(...),
     vehicle_id: int = Form(0),
+    doc_type: str = Form("maintenance"),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -47,7 +48,7 @@ def ocr_upload(
     image_bytes = dest.read_bytes()
 
     provider = _vision_provider(db)
-    result = ocr_service.recognize_image(image_bytes, provider)
+    result = ocr_service.recognize_image(image_bytes, provider, doc_type)
     task = OcrTask(
         user_id=user.id,
         vehicle_id=vehicle_id or None,
@@ -61,7 +62,7 @@ def ocr_upload(
 
     if result["mode"] == "text":
         parsed = ocr_service.extract_from_text(
-            result["text"], llm_service.get_default_provider(db)
+            result["text"], llm_service.get_default_provider(db), doc_type
         )
         task.parsed_json = str(parsed)
         db.commit()
@@ -71,12 +72,14 @@ def ocr_upload(
             "task_id": task.id,
             "text": result["text"],
             "draft": parsed.get("draft"),
+            "doc_type": doc_type,
             "message": "识别完成，请核对表单后保存",
         }
     return {
         "mode": result["mode"],
         "image_path": task.image_path,
         "task_id": task.id,
+        "doc_type": doc_type,
         "message": result.get("message", "已留存图片，可粘贴单据文字或手工录入"),
     }
 
@@ -85,12 +88,13 @@ def ocr_upload(
 def ocr_parse_text(
     text: str = Form(...),
     vehicle_id: int = Form(0),
+    doc_type: str = Form("maintenance"),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """粘贴单据文本 → 默认模型结构化抽取 → 表单草稿"""
     provider = llm_service.get_default_provider(db)
-    result = ocr_service.extract_from_text(text, provider)
+    result = ocr_service.extract_from_text(text, provider, doc_type)
     task = OcrTask(
         user_id=user.id,
         vehicle_id=vehicle_id or None,
@@ -104,5 +108,6 @@ def ocr_parse_text(
     return {
         "mode": result["mode"],
         "draft": result.get("draft"),
+        "doc_type": doc_type,
         "message": result.get("message", "解析完成，请核对后保存"),
     }
