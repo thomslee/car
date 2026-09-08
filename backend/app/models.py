@@ -197,6 +197,23 @@ class Inspection(Base):
     created_at = Column(DateTime, default=datetime.now)
 
 
+class ParkingRecord(Base):
+    __tablename__ = "parking_records"
+
+    id = Column(Integer, primary_key=True)
+    vehicle_id = Column(Integer, ForeignKey("vehicles.id"), nullable=False, index=True)
+    parking_address = Column(String(200), default="")  # 车位地址
+    parking_no = Column(String(50), default="")  # 车位号码
+    charge_company = Column(String(100), default="")  # 收费单位
+    start_date = Column(Date, nullable=True)  # 起始时间
+    duration_months = Column(Integer, default=12)  # 租期（月）
+    end_date = Column(Date, nullable=True)  # 结束时间（自动计算）
+    amount = Column(Integer, default=0)  # 金额（元，总金额）
+    note = Column(String(500), default="")
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
 class ViolationRecord(Base):
     __tablename__ = "violation_records"
 

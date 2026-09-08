@@ -21,6 +21,7 @@ from .routers import (
     insurance,
     maintenance,
     ocr,
+    parking,
     refuels,
     reminders,
     stats,
@@ -218,6 +219,7 @@ app.include_router(maintenance.router)
 app.include_router(refuels.router)
 app.include_router(insurance.router)
 app.include_router(inspections.router)
+app.include_router(parking.router)
 app.include_router(violations.router)
 app.include_router(reminders.router)
 app.include_router(attachments.router)

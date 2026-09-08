@@ -4,7 +4,7 @@ from datetime import date, timedelta
 
 from sqlalchemy.orm import Session
 
-from ..models import InsurancePolicy, Inspection, MaintenanceRecord, Reminder, User, Vehicle
+from ..models import InsurancePolicy, Inspection, MaintenanceRecord, ParkingRecord, Reminder, User, Vehicle
 from . import ai_service
 
 
@@ -134,6 +134,21 @@ def scan_for_user(db: Session, user: User, threshold_days: int):
                         f"到期日 {next_ins['next_date']}，剩余 {days_left} 天，请及时办理",
                         threshold_days,
                     )
+        # 停车到期（长租车位，到期前1个月提醒续租或退租）
+        for pk in (
+            db.query(ParkingRecord)
+            .filter(ParkingRecord.vehicle_id == v.id, ParkingRecord.end_date.isnot(None))
+            .all()
+        ):
+            days_left = (pk.end_date - today).days
+            if 0 <= days_left <= threshold_days:
+                _upsert(
+                    db, user.id, v.id, "停车", pk.id,
+                    f"车位到期：{pk.parking_address or '未填地址'} {pk.parking_no or ''}",
+                    pk.end_date,
+                    f"车位{pk.parking_no or ''}租期将于 {pk.end_date} 到期，剩余 {days_left} 天，请及时续租或退租",
+                    threshold_days,
+                )
         # 保养到期（基于车辆保养周期，或的关系：时间或里程任一先到）
         try:
             interval_months = v.maint_interval_months or 12

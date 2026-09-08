@@ -240,6 +240,27 @@ class InspectionOut(InspectionIn):
         from_attributes = True
 
 
+# ---------- 停车 ----------
+class ParkingIn(BaseModel):
+    vehicle_id: int
+    parking_address: str = ""
+    parking_no: str = ""
+    charge_company: str = ""
+    start_date: Optional[date] = None
+    duration_months: int = 12
+    amount: int = 0
+    note: str = ""
+
+
+class ParkingOut(ParkingIn):
+    id: int
+    end_date: Optional[date] = None
+    created_at: Any = None
+
+    class Config:
+        from_attributes = True
+
+
 # ---------- 违章 ----------
 class ViolationIn(BaseModel):
     vehicle_id: int

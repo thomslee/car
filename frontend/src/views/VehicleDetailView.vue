@@ -67,6 +67,7 @@
         <van-cell icon="edit" title="车辆档案" is-link @click="router.push(`/vehicle/${vehicleId}/archive`)" />
         <van-cell icon="shield-o" title="保险" is-link @click="router.push(`/vehicle/${vehicleId}/insurance`)" />
         <van-cell icon="certificate" title="年检" is-link @click="router.push(`/vehicle/${vehicleId}/inspections`)" />
+        <van-cell icon="location-o" title="停车" is-link @click="router.push(`/vehicle/${vehicleId}/parking`)" />
         <van-cell icon="warning-o" title="违章记录" is-link @click="router.push(`/vehicle/${vehicleId}/violations`)" />
         <van-cell icon="guide-o" title="AI 智能分析" is-link @click="router.push(`/vehicle/${vehicleId}/ai`)" />
         <van-cell icon="bar-chart-o" title="统计报表" is-link @click="router.push(`/vehicle/${vehicleId}/stats`)" />
