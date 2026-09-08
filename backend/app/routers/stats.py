@@ -11,6 +11,7 @@ from ..models import (
     Inspection,
     InsurancePolicy,
     MaintenanceRecord,
+    ParkingRecord,
     RefuelRecord,
     User,
     Vehicle,
@@ -36,7 +37,6 @@ def annual_cost(
 
     maintenance_total = 0.0
     repair_total = 0.0
-    maintenance_monthly = {f"{m:02d}": 0.0 for m in range(1, 13)}
     for r in (
         db.query(MaintenanceRecord)
         .filter(MaintenanceRecord.vehicle_id == vehicle_id)
@@ -48,7 +48,6 @@ def annual_cost(
                 repair_total += cost
             else:
                 maintenance_total += cost
-            maintenance_monthly[f"{r.occurred_at.month:02d}"] += cost
 
     fuel_total = sum(
         float(r.total_cost or 0)
@@ -70,6 +69,11 @@ def annual_cost(
         for r in db.query(ViolationRecord).filter(ViolationRecord.vehicle_id == vehicle_id).all()
         if in_year(r.occurred_at, y)
     )
+    parking_total = sum(
+        float(r.amount or 0)
+        for r in db.query(ParkingRecord).filter(ParkingRecord.vehicle_id == vehicle_id).all()
+        if in_year(r.start_date, y)
+    )
 
     categories = [
         {"name": "保养", "amount": round(maintenance_total, 2)},
@@ -77,6 +81,7 @@ def annual_cost(
         {"name": "加油", "amount": round(fuel_total, 2)},
         {"name": "保险", "amount": round(insurance_total, 2)},
         {"name": "年检", "amount": round(inspection_total, 2)},
+        {"name": "停车", "amount": round(parking_total, 2)},
         {"name": "违章罚款", "amount": round(violation_total, 2)},
     ]
     total = round(sum(c["amount"] for c in categories), 2)
@@ -84,9 +89,6 @@ def annual_cost(
         "year": y,
         "total": total,
         "categories": categories,
-        "maintenance_monthly": [
-            {"month": m, "amount": round(maintenance_monthly[m], 2)} for m in sorted(maintenance_monthly)
-        ],
     }
 
 

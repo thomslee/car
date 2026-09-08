@@ -15,11 +15,6 @@
     </div>
 
     <div style="margin-top:12px;background:#fff;border-radius:10px;padding:12px;">
-      <div style="font-size:14px;font-weight:600;margin-bottom:8px;">月度保养费用（元）</div>
-      <div ref="monthlyChart" style="width:100%;height:200px;"></div>
-    </div>
-
-    <div style="margin-top:12px;background:#fff;border-radius:10px;padding:12px;">
       <div style="font-size:14px;font-weight:600;margin-bottom:8px;">油耗趋势（L/100km）</div>
       <div v-if="fuel?.points?.length" ref="fuelChart" style="width:100%;height:220px;"></div>
       <van-empty v-else description="暂无油耗数据（需两次加满记录）" image-size="60" />
@@ -40,7 +35,6 @@ const year = ref(new Date().getFullYear())
 const cost = ref(null)
 const fuel = ref(null)
 const costChart = ref(null)
-const monthlyChart = ref(null)
 const fuelChart = ref(null)
 let charts = []
 
@@ -69,21 +63,6 @@ function renderCharts() {
         data: cost.value.categories.map(x => x.amount),
         itemStyle: { color: '#1989fa', borderRadius: [4, 4, 0, 0] },
         label: { show: true, position: 'top', fontSize: 10, color: '#666' }
-      }]
-    })
-    charts.push(c)
-  }
-  if (monthlyChart.value) {
-    const c = echarts.init(monthlyChart.value)
-    c.setOption({
-      tooltip: { trigger: 'axis' },
-      xAxis: { type: 'category', data: cost.value.maintenance_monthly.map(x => x.month + '月'), axisLabel: { color: '#666', fontSize: 10 } },
-      yAxis: { type: 'value', axisLabel: { color: '#666', fontSize: 11 } },
-      series: [{
-        type: 'line', smooth: true,
-        data: cost.value.maintenance_monthly.map(x => x.amount),
-        itemStyle: { color: '#07c160' }, lineStyle: { color: '#07c160' },
-        areaStyle: { opacity: 0.1 }
       }]
     })
     charts.push(c)
