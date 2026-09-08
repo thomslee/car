@@ -11,7 +11,7 @@
 
     <div style="margin-top:12px;background:#fff;border-radius:10px;padding:12px;">
       <div style="font-size:14px;font-weight:600;margin-bottom:8px;">年度费用分类（元）</div>
-      <div ref="costChart" style="width:100%;height:220px;"></div>
+      <div ref="costChart" style="width:100%;height:250px;"></div>
     </div>
 
     <div style="margin-top:12px;background:#fff;border-radius:10px;padding:12px;">
@@ -56,7 +56,7 @@ function renderCharts() {
     const c = echarts.init(costChart.value)
     c.setOption({
       tooltip: { trigger: 'item' },
-      xAxis: { type: 'category', data: cost.value.categories.map(x => x.name), axisLabel: { color: '#666', fontSize: 11 } },
+      xAxis: { type: 'category', data: cost.value.categories.map(x => x.name), axisLabel: { color: '#666', fontSize: 10, interval: 0, rotate: 25 } },
       yAxis: { type: 'value', axisLabel: { color: '#666', fontSize: 11 } },
       series: [{
         type: 'bar',
